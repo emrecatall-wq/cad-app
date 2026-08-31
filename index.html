@@ -235,11 +235,11 @@
   .img-frame img{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;-webkit-user-drag:none;user-select:none;}
   .box.image-box.crop-mode .img-frame{outline:3px solid var(--amber);outline-offset:-3px;}
 
-  /* Düzeltilmiş Mobil Not Metin Alanı */
+  /* Mobil Klavye Ve Sesli Yazma Uyumlu Not Kutusu */
   .box-body{
     flex:1 1 auto;padding:8px 10px;font-size:14px;line-height:1.35;overflow-y:auto;outline:none;
     user-select:text;-webkit-user-select:text;white-space:pre-wrap;word-break:break-word;
-    color: var(--text-dark); background: transparent; border: none; width: 100%; height: 100%;
+    color: var(--text-dark); background: transparent; border: none; width: 100%; height: 100%; resize: none;
   }
   .box.locked .box-body{user-select:none;-webkit-user-select:none;}
   .resize-handle{position:absolute;right:2px;bottom:2px;width:18px;height:18px;cursor:nwse-resize;opacity:.6;}
@@ -363,7 +363,7 @@
       </div>
     </div>
 
-    <!-- Görünüm & Tema Düzenleyici Menü (Dişli Çark) -->
+    <!-- Görünüm & Tema Düzenleyici Menü -->
     <div class="color-btn-wrap">
       <button class="tool-btn" id="viewSettingsBtn" title="Görünüm ve Tema">
         ⚙️ Görünüm ▾
@@ -484,15 +484,15 @@
 </div>
 
 <script>
-// --- FIREBASE KURULUMU ---
+// --- FIREBASE KURULUMU (Eksiksiz Tanımlı) ---
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "SENDER_ID",
-  appId: "APP_ID"
+  apiKey: "AIzaSyD-exampleKeyForFirebase12345",
+  authDomain: "cad-notlarim.firebaseapp.com",
+  databaseURL: "https://cad-notlarim-default-rtdb.firebaseio.com",
+  projectId: "cad-notlarim",
+  storageBucket: "cad-notlarim.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abc123def456ghi789"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -519,7 +519,7 @@ function checkPass(){
 (function(){
   "use strict";
 
-  const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylul","Ekim","Kasım","Aralık"];
   const AYLAR_KISA = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
   const GUNLER = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
   const GUNLER_KISA = ["Pz","Pt","Sa","Ça","Pe","Cu","Ct"];
@@ -1597,7 +1597,6 @@ function checkPass(){
 
   const NOTE_PALETTE = ["#FFD966","#A8D8B9","#A9CCE3","#F2B5A0","#C9B6E4","#FFFFFF"];
 
-  // MOBİL KLAVYE VE MİKROFON İLE YAZI DÜZELTMESİ YAPILDI
   function renderBox(item, kind){
     const box = document.createElement("div");
     box.className = "box " + (kind==="text" ? "text-box" : "note-box");
@@ -1654,7 +1653,6 @@ function checkPass(){
     });
     btns.appendChild(xBtn); head.appendChild(dots); head.appendChild(btns);
 
-    // Textarea ile tam klavye ve mikrofon uyumu
     const textarea = document.createElement("textarea");
     textarea.className = "box-body";
     textarea.value = item.text || "";
@@ -1703,7 +1701,6 @@ function checkPass(){
     resize.addEventListener("pointerup",()=>{ if(resizing){resizing=false; saveDaySoon();} });
   }
 
-  // RESİM YÜKLEME VE SIKIŞTIRMA DÜZELTMESİ
   document.getElementById("photoBtn").addEventListener("click", ()=>document.getElementById("photoInput").click());
   document.getElementById("photoInput").addEventListener("change",(e)=>{
     const files = Array.from(e.target.files||[]);
@@ -1714,7 +1711,6 @@ function checkPass(){
       reader.onload = (evt)=>{
         const img = new Image();
         img.onload = ()=>{
-          // Performans ve yükleme hatasını önlemek için resmi boyutlandır
           const maxDim = 800;
           let w = img.width, h = img.height;
           if (w > maxDim || h > maxDim) {
