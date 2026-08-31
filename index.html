@@ -2,479 +2,189 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#1B2430">
-<title>AutoCAD Tarzı CAD Çizim ve Not Defteri</title>
-
-<!-- PWA Manifest -->
-<link rel="manifest" href="manifest.json">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<!-- Excel Dışa Aktarma -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#1e293b">
+<title>CAD Not Defteri</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- PDF Dışa Aktarma Kütüphaneleri -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
-    --navy:#1B2430;
-    --navy-2:#242F3E;
-    --amber:#E8A33D;
-    --ink-blue:#2B4C7E;
-    --paper:#F7F5EF;
-    --grid-line:#DDE1E7;
-    --text-dark:#1B2430;
-    --danger:#B23A48;
-    --snap:#00FF66;
-    --grid-size: 26px;
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --accent:#3b82f6; --accent2:#2563eb;
+    --text:#e2e8f0; --muted:#94a3b8; --danger:#ef4444; --ok:#22c55e; --border:#334155;
   }
-  
-  body.theme-light-grey { --paper: #E9ECEF; --grid-line: #CED4DA; --text-dark: #212529; }
-  body.theme-sepia      { --paper: #F4ECD8; --grid-line: #E2D7BF; --text-dark: #4A3B32; }
-  body.theme-cream      { --paper: #FFFDD0; --grid-line: #EEDC9A; --text-dark: #333333; }
-  body.theme-dark       { --paper: #1E1E1E; --grid-line: #333333; --text-dark: #E0E0E0; }
-  body.theme-pale-blue  { --paper: #E8F1F5; --grid-line: #C3D5E0; --text-dark: #1C2D37; }
-  body.theme-pale-green { --paper: #EAF2E8; --grid-line: #C5DAC1; --text-dark: #1F331C; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; user-select:none;}
+  #app{display:flex; flex-direction:column; width:100vw; height:100vh; height:100dvh;}
 
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{
-    height:100%;margin:0;overflow:hidden;overscroll-behavior:none;
-    font-family:'Inter',sans-serif;color:var(--text-dark);
-    -webkit-user-select:none;user-select:none;
-    background: var(--navy);
-  }
+  /* ---------- LOCK SCREEN ---------- */
+  #lockScreen{position:fixed; inset:0; background:linear-gradient(160deg,#0f172a,#1e293b 60%,#111827); z-index:9999;
+    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;}
+  #lockScreen h1{font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:.5px;}
+  #lockScreen .sub{color:var(--muted); font-size:13px; margin-bottom:10px;}
+  #lockBox{background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:28px 26px; width:min(320px,86vw); text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.4);}
+  #pwInput{width:100%; font-size:26px; letter-spacing:8px; text-align:center; padding:12px 8px; border-radius:10px; border:1px solid var(--border); background:#0b1220; color:var(--text); outline:none;}
+  #pwInput:focus{border-color:var(--accent);}
+  #lockBtn{margin-top:14px; width:100%; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:16px; font-weight:600; cursor:pointer;}
+  #lockBtn:active{background:var(--accent2);}
+  #lockError{color:var(--danger); font-size:13px; height:16px; margin-top:8px;}
 
-  /* Şifre Kilit Ekranı Modal */
-  #lockOverlay {
-    position: fixed; inset: 0; z-index: 9999;
-    background: var(--navy); display: flex; flex-direction: column;
-    align-items: center; justify-content: center; color: #fff; padding: 20px;
-  }
-  #lockOverlay.unlocked { display: none; }
-  .lock-card {
-    background: var(--navy-2); border: 1px solid #364252; padding: 30px;
-    border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
-    display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 320px;
-  }
-  .lock-title { font-family: 'Space Mono', monospace; font-size: 16px; color: var(--amber); }
-  .lock-input {
-    width: 100%; background: #141A22; border: 1px solid #364252; color: #fff;
-    font-size: 24px; text-align: center; padding: 10px; border-radius: 8px; letter-spacing: 0.3em; outline: none;
-  }
-  .lock-btn {
-    width: 100%; background: var(--amber); color: var(--navy); border: none;
-    padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 15px;
-  }
+  /* ---------- TOP BAR ---------- */
+  #topbar{display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:nowrap; overflow-x:auto;}
+  #topbar::-webkit-scrollbar{height:4px;}
+  .navbtn{background:var(--panel2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; font-size:14px; white-space:nowrap; cursor:pointer;}
+  .navbtn:active{background:var(--accent2);}
+  #dateLabel{font-weight:600; font-size:14px; padding:0 4px; white-space:nowrap;}
+  #dateInput{background:var(--panel2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px; font-size:13px;}
+  #syncDot{width:9px; height:9px; border-radius:50%; background:var(--muted); margin-left:4px; flex:0 0 auto;}
+  #syncDot.on{background:var(--ok);}
+  #syncDot.busy{background:#f59e0b;}
 
-  #app{height:100dvh;width:100vw;display:flex;flex-direction:column;background:var(--navy);}
+  /* ---------- TOOLBAR ---------- */
+  #toolbar{display:flex; align-items:center; gap:6px; padding:6px 8px; background:var(--panel2); border-bottom:1px solid var(--border); overflow-x:auto; white-space:nowrap;}
+  #toolbar::-webkit-scrollbar{height:4px;}
+  .tool{background:#1c2740; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 9px; font-size:16px; cursor:pointer; flex:0 0 auto; line-height:1;}
+  .tool.active{background:var(--accent); border-color:var(--accent);}
+  .tool.toggle.on{background:#0e7490; border-color:#0e7490;}
+  .sep{width:1px; align-self:stretch; background:var(--border); margin:0 3px; flex:0 0 auto;}
+  select.tool, input[type=color].tool{padding:5px; height:36px;}
+  #finishPolyBtn{display:none;}
 
-  header{
-    flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 12px;
-    padding-top:max(10px, env(safe-area-inset-top));background:var(--navy);color:#fff;
-    position:relative;z-index:30;
-  }
-  .day-nav-btn{
-    background:var(--navy-2);border:1px solid #364252;color:#fff;
-    width:34px;height:34px;border-radius:8px;font-size:18px;
-    display:flex;align-items:center;justify-content:center;flex:0 0 auto;
-  }
-  .date-block{flex:1 1 auto;display:flex;flex-direction:column;line-height:1.05;min-width:0;cursor:pointer;}
-  .date-block .weekday{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);}
-  .date-block .full-date{font-family:'Space Mono',monospace;font-weight:700;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .cal-toggle{flex:0 0 auto;background:var(--amber);color:var(--navy);border:none;width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-  .cal-toggle svg{width:19px;height:19px;}
-  .today-btn{flex:0 0 auto;background:var(--navy-2);border:1px solid #364252;color:#cfd6e0;font-family:'Space Mono',monospace;font-size:11px;padding:0 10px;height:34px;border-radius:8px;cursor:pointer;}
+  /* ---------- WORKSPACE ---------- */
+  #workspace{flex:1; overflow-y:auto; overflow-x:hidden; background:#0b1220; padding:16px 0 90px; display:flex; flex-direction:column; align-items:center; gap:22px;}
+  .pageWrap{position:relative; width:min(96vw,760px); aspect-ratio:210/297; background:#fff; box-shadow:0 4px 24px rgba(0,0,0,.5); border-radius:4px; overflow:hidden; flex:0 0 auto;}
+  .pageWrap .pageLabel{position:absolute; top:6px; left:8px; font-size:11px; color:#94a3b8; z-index:5; background:rgba(255,255,255,.7); padding:1px 6px; border-radius:4px;}
+  .pageWrap .delPageBtn{position:absolute; top:4px; right:8px; z-index:6; background:rgba(239,68,68,.85); color:#fff; border:none; border-radius:6px; width:24px; height:24px; font-size:14px; cursor:pointer;}
+  canvas.gridLayer, canvas.inkCanvas{position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none;}
+  canvas.gridLayer{z-index:1;}
+  canvas.inkCanvas{z-index:2;}
+  .overlay{position:absolute; top:0; left:0; width:100%; height:100%; z-index:3; pointer-events:none;}
+  .box{position:absolute; pointer-events:auto; border:1.5px dashed rgba(0,0,0,.35); border-radius:6px; min-width:60px; min-height:40px; overflow:hidden; touch-action:none;}
+  .box.locked{border-style:solid; border-color:rgba(0,0,0,.15);}
+  .box .boxBar{position:absolute; top:0; left:0; right:0; height:22px; background:rgba(30,41,59,.75); display:flex; align-items:center; justify-content:flex-end; gap:3px; padding:0 3px; cursor:grab; z-index:2;}
+  .box .boxBar button{background:rgba(255,255,255,.15); border:none; color:#fff; width:18px; height:18px; border-radius:4px; font-size:11px; cursor:pointer; line-height:1;}
+  .box .boxBar button.ok{background:#16a34a;}
+  .box .boxBar button.del{background:#dc2626;}
+  .box textarea{width:100%; height:100%; border:none; resize:none; padding:24px 8px 8px; font-size:14px; font-family:inherit; outline:none; background:transparent; color:#111;}
+  .box img{width:100%; height:100%; object-fit:contain; display:block; padding-top:22px; box-sizing:border-box; pointer-events:none;}
+  .box .resizeHandle{position:absolute; right:2px; bottom:2px; width:18px; height:18px; background:rgba(0,0,0,.35); border-radius:4px 0 6px 0; cursor:se-resize; z-index:2;}
+  .box.note{background:#fff59d;}
 
-  #calPopover{
-    position:absolute;top:100%;right:12px;margin-top:6px;width:272px;background:var(--navy-2);
-    border:1px solid #364252;border-radius:12px;box-shadow:0 12px 28px rgba(0,0,0,.4);padding:10px;z-index:40;display:none;
-  }
-  #calPopover.open{display:block;}
-  .cal-head{display:flex;align-items:center;justify-content:space-between;color:#fff;font-family:'Space Mono',monospace;font-size:13px;margin-bottom:8px;}
-  .cal-head button{background:none;border:none;color:var(--amber);font-size:16px;padding:4px 8px;cursor:pointer;}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-  .cal-dow{font-family:'Space Mono',monospace;font-size:9px;color:#8593a6;text-align:center;padding:3px 0;}
-  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#dfe4ea;border-radius:7px;position:relative;cursor:pointer;}
-  .cal-day.other{color:#4a5568;}
-  .cal-day.today{outline:1px solid var(--amber);}
-  .cal-day.selected{background:var(--amber);color:var(--navy);font-weight:700;}
-  .cal-day .dot{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--ink-blue);}
+  /* theme backgrounds applied to pageWrap */
+  .theme-default{background:#ffffff;}
+  .theme-sepya{background:#f4ecd8;}
+  .theme-krem{background:#fdf6e3;}
+  .theme-gri{background:#f1f3f5;}
+  .theme-mavi{background:#eaf3fb;}
+  .theme-yesil{background:#eef8ee;}
 
-  #toolbar{
-    flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:7px 8px;
-    background:var(--paper);border-bottom:1px solid var(--grid-line);overflow-x:auto;z-index:20;
-    transition: background 0.3s;
-  }
-  .tool-btn{
-    flex:0 0 auto;height:38px;padding:0 10px;border-radius:9px;border:1.5px solid transparent;
-    background:#fff;display:flex;align-items:center;justify-content:center;gap:6px;
-    box-shadow:0 1px 2px rgba(27,36,48,.12);font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;
-  }
-  .tool-btn svg{width:19px;height:19px;stroke:var(--navy);}
-  .tool-btn.active{border-color:var(--navy);background:#EFE9DA;}
-  .tool-sep{width:1px;align-self:stretch;background:var(--grid-line);flex:0 0 auto;margin:0 2px;}
-  .swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--grid-line);flex:0 0 auto;cursor:pointer;}
-  .swatch.active{box-shadow:0 0 0 2px var(--navy);}
-  .tool-btn.danger svg{stroke:var(--danger);}
-  .color-btn-wrap{position:relative;flex:0 0 auto;}
-  .color-btn{width:24px;height:24px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--grid-line);margin:0 2px;cursor:pointer;}
-  .color-popover{position:fixed;display:none;gap:6px;background:#fff;border:1px solid var(--grid-line);border-radius:10px;padding:7px;box-shadow:0 8px 18px rgba(27,36,48,.25);z-index:60;}
-  .color-popover.open{display:flex;}
+  #addPageBar{display:flex; justify-content:center; padding:6px;}
+  #addPageBtn{background:var(--panel2); border:1px dashed var(--border); color:var(--text); padding:12px 24px; border-radius:10px; cursor:pointer; font-size:14px;}
 
-  .tool-popover{
-    position:fixed;display:none;flex-direction:column;gap:4px;background:#fff;
-    border:1px solid var(--grid-line);border-radius:12px;padding:8px;
-    box-shadow:0 8px 22px rgba(27,36,48,.25);z-index:60;min-width:210px;
-  }
-  .tool-popover.open{display:flex;}
-  .draw-opt{
-    display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;border:none;
-    background:#f5f4ef;font-family:'Inter',sans-serif;font-size:13px;color:var(--navy);text-align:left;cursor:pointer;
-  }
-  .draw-opt svg{width:17px;height:17px;stroke:var(--navy);flex:0 0 auto;}
-  .draw-opt.active{background:var(--amber);color:var(--navy);font-weight:600;}
+  #fileInputPhoto{display:none;}
+  #snapDot{position:absolute; width:12px; height:12px; border:2px solid #f59e0b; border-radius:50%; pointer-events:none; z-index:10; display:none; transform:translate(-50%,-50%);}
+  .trackGuide{position:absolute; z-index:9; pointer-events:none; background:transparent; border-left:1px dashed #f59e0b; border-top:1px dashed #f59e0b; display:none;}
 
-  #viewSettingsPopover{
-    position:fixed;display:none;flex-direction:column;gap:10px;background:#fff;
-    border:1px solid var(--grid-line);border-radius:12px;padding:12px;
-    box-shadow:0 8px 22px rgba(27,36,48,.25);z-index:60;width:240px;
-  }
-  #viewSettingsPopover.open{display:flex;}
-  .pop-title{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;}
-  .theme-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:6px;}
-  .theme-chip{
-    height:32px;border-radius:6px;border:1px solid #ccc;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;
-  }
-  .theme-chip.active{border:2px solid var(--amber);font-weight:700;}
+  #toast{position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#111827; border:1px solid var(--border); color:#fff; padding:9px 16px; border-radius:20px; font-size:13px; z-index:9998; opacity:0; transition:opacity .25s; pointer-events:none;}
+  #toast.show{opacity:1;}
 
-  #snapMenuPanel{
-    position:fixed;display:none;flex-direction:column;gap:4px;background:#fff;
-    border:1px solid var(--grid-line);border-radius:12px;padding:8px;
-    box-shadow:0 8px 22px rgba(27,36,48,.25);z-index:65;min-width:210px;
-  }
-  #snapMenuPanel.open{display:flex;}
-  .snap-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--navy);cursor:pointer;background:#f8f7f2;}
-  .snap-item:hover{background:#edebe1;}
-  .snap-item.on{font-weight:600;color:#00aa44;}
-
-  #polyBar, #selectBar{
-    position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));
-    transform:translateX(-50%);z-index:46;background:var(--navy);border-radius:24px;
-    padding:6px 10px;display:none;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.35);
-  }
-  #polyBar.show, #selectBar.show{display:flex;}
-  #polyBar button, #selectBar button{
-    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
-    padding:8px 16px;border-radius:18px;border:none;color:#fff;cursor:pointer;
-  }
-  #polyDone{background:#3a9d5c;}
-  #polyCancel{background:var(--navy-2);}
-  #btnCopySelected{background:var(--amber);color:var(--navy);}
-  #btnDeleteSelected{background:var(--danger);}
-  #btnDeselectAll{background:var(--navy-2);}
-
-  #canvasWrap{flex:1 1 auto;position:relative;background:var(--paper);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;transition: background 0.3s;}
-  #canvasInner{
-    position:relative;width:100%;
-    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: var(--grid-size) var(--grid-size);
-    background-color: var(--paper);
-    transition: background-color 0.3s;
-  }
-  #inkCanvas{position:absolute;inset:0;}
-  #overlay{position:absolute;inset:0;pointer-events:none;}
-
-  .box{
-    position:absolute;min-width:140px;min-height:90px;border-radius:8px;
-    box-shadow:0 3px 10px rgba(27,36,48,.18);display:flex;flex-direction:column;
-    touch-action:none;pointer-events:auto;z-index:10;
-  }
-  .box.text-box{background:#FFFDF6;border:1px solid var(--grid-line);}
-  
-  .box-head{
-    flex:0 0 auto;height:32px;display:flex;align-items:center;justify-content:space-between;
-    padding:0 8px;cursor:grab;border-top-left-radius:8px;border-top-right-radius:8px;background:rgba(27,36,48,.12);
-    touch-action:none;
-  }
-  .box.image-box{background:#fff;padding:0;min-width:100px;min-height:100px;border:1px solid #ccc;}
-  .box.image-box .box-head{
-    background:var(--navy);color:#fff;border-radius:6px 6px 0 0;
-  }
-  
-  .box-btns{display:flex;gap:8px;align-items:center;}
-  .box-confirm-btn{width:24px;height:24px;border-radius:6px;background:#3a9d5c;color:#fff;font-size:14px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-  .box-confirm-btn.confirmed{background:#7a8a9e;}
-  .box-x{width:24px;height:24px;border-radius:50%;background:rgba(178,58,72,.85);color:#fff;font-size:15px;font-weight:bold;line-height:24px;text-align:center;cursor:pointer;}
-  
-  .corner-handle{position:absolute;width:24px;height:24px;background:var(--amber);border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:15;touch-action:none;}
-  .corner-handle.se{right:-12px;bottom:-12px;cursor:nwse-resize;}
-
-  .img-frame{position:relative;flex:1 1 auto;overflow:hidden;border-radius:0 0 8px 8px;background:#eee;touch-action:none;height:calc(100% - 32px);width:100%;}
-  .img-frame img{width:100%;height:100%;object-fit:contain;pointer-events:none;-webkit-user-drag:none;user-select:none;}
-
-  .box-body{
-    flex:1 1 auto;padding:8px 10px;font-size:14px;line-height:1.35;overflow-y:auto;outline:none;
-    user-select:text;-webkit-user-select:text;white-space:pre-wrap;word-break:break-word;
-    color: var(--text-dark); background: transparent; border: none; width: 100%; height: 100%; resize: none;
-  }
-  .box.locked .box-body{user-select:none;-webkit-user-select:none;}
-  .resize-handle{position:absolute;right:2px;bottom:2px;width:20px;height:20px;cursor:nwse-resize;opacity:.7;touch-action:none;}
-
-  #toast{
-    position:absolute;left:50%;bottom:14px;transform:translate(-50%,10px);
-    background:var(--navy);color:#fff;font-family:'Space Mono',monospace;font-size:11px;
-    padding:6px 14px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;z-index:50;
-  }
-  #toast.show{opacity:1;transform:translate(-50%,0);}
-
-  #dimEditor{
-    position:fixed;z-index:70;display:none;background:var(--navy);border:1px solid #364252;
-    border-radius:12px;padding:8px 12px;box-shadow:0 8px 24px rgba(0,0,0,0.5);color:#fff;gap:8px;align-items:center;
-  }
-  #dimEditor.show{display:flex;}
-  #dimEditor input{width:90px;background:var(--navy-2);border:1px solid #364252;color:var(--amber);font-size:15px;font-weight:700;padding:6px 8px;border-radius:6px;outline:none;text-align:center;}
-  #dimEditor button{background:var(--amber);color:var(--navy);border:none;border-radius:6px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;}
-
-  .page-divider{position:absolute;left:0;right:0;height:1px;border-top:2px dashed #C7CDD6;pointer-events:none;}
-  .page-divider span{position:absolute;right:10px;top:-19px;font-family:'Space Mono',monospace;font-size:10px;color:#8b93a1;background:var(--paper);padding:0 6px;}
-  #pageNav{
-    position:fixed;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:45;
-    background:var(--navy);color:#fff;border-radius:20px;padding:6px;display:flex;align-items:center;gap:4px;
-    box-shadow:0 6px 16px rgba(0,0,0,.32);font-family:'Space Mono',monospace;font-size:11px;
-  }
-  #pageNav button{background:var(--navy-2);border:none;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
-  #pageLabel{padding:0 4px;min-width:34px;text-align:center;}
-
-  #undoBtn{position:relative;}
-  #undoBtn:disabled{opacity:.35;pointer-events:none;}
-  
-  .drag-dots { font-size: 11px; color: #666; user-select: none; }
-  .color-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 0 0 1px #ddd; }
+  ::selection{background:var(--accent);}
 </style>
 </head>
 <body>
-
-<!-- Şifre Kilit Ekranı Modal -->
-<div id="lockOverlay">
-  <div class="lock-card">
-    <div class="lock-title">🔒 UYGULAMA KİLİTLİ</div>
-    <input type="password" id="passInput" class="lock-input" maxlength="6" placeholder="******" autofocus>
-    <button id="unlockBtn" class="lock-btn">Giriş Yap</button>
-  </div>
-</div>
-
 <div id="app">
 
-  <header>
-    <button class="day-nav-btn" id="prevDay">‹</button>
-    <div class="date-block" id="dateBlock">
-      <div class="weekday" id="weekdayLabel">—</div>
-      <div class="full-date" id="fullDateLabel">—</div>
+  <!-- LOCK SCREEN -->
+  <div id="lockScreen">
+    <h1>CAD Not Defteri</h1>
+    <div class="sub">Devam etmek için şifreyi girin</div>
+    <div id="lockBox">
+      <input id="pwInput" type="password" inputmode="numeric" maxlength="12" placeholder="••••••" autocomplete="off">
+      <button id="lockBtn">Giriş Yap</button>
+      <div id="lockError"></div>
     </div>
-    <button class="today-btn" id="todayBtn">BUGÜN</button>
-    <button class="day-nav-btn" id="nextDay">›</button>
-    <button class="cal-toggle" id="calToggle" title="Takvim">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#1B2430" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
-    </button>
+  </div>
 
-    <div id="calPopover">
-      <div class="cal-head">
-        <button id="calPrevMonth">‹</button>
-        <span id="calMonthLabel">—</span>
-        <button id="calNextMonth">›</button>
-      </div>
-      <div class="cal-grid" id="calGrid"></div>
-    </div>
-  </header>
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <button class="navbtn" id="prevDayBtn">◀ Önceki</button>
+    <button class="navbtn" id="todayBtn">Bugün</button>
+    <button class="navbtn" id="nextDayBtn">Sonraki ▶</button>
+    <span id="dateLabel">-</span>
+    <input type="date" id="dateInput">
+    <span id="syncDot" title="Senkron durumu"></span>
+  </div>
 
+  <!-- TOOLBAR -->
   <div id="toolbar">
-    <button class="tool-btn active" data-tool="pen" title="Serbest Kalem">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l3.6-.9L18.5 8.2a2 2 0 0 0 0-2.8l-1.9-1.9a2 2 0 0 0-2.8 0L1.9 15.4 3 21z"/><path d="M13 5.5l3.5 3.5"/></svg>
-      Kalem
-    </button>
-
-    <div class="color-btn-wrap">
-      <button class="tool-btn" id="cadDrawBtn" title="Çizim Araçları">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="5" r="1.5"/></svg>
-        Çizim ▾
-      </button>
-      <div class="tool-popover" id="cadDrawPopover">
-        <button class="draw-opt" data-cadtool="select">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
-          Çizgi Seç / Sil (İmleç)
-        </button>
-        <button class="draw-opt" data-cadtool="line">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"/></svg>
-          Çizgi (Line)
-        </button>
-        <button class="draw-opt" data-cadtool="mdf18">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><rect x="3" y="8" width="18" height="8" rx="1"/></svg>
-          18mm MDF Çizgi (Kilitli 90°)
-        </button>
-        <button class="draw-opt" data-cadtool="dimension">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="3" y2="18"/><line x1="21" y1="6" x2="21" y2="18"/></svg>
-          Ölçülendirme (Dimension)
-        </button>
-        <button class="draw-opt" data-cadtool="polyline">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 19 9 8 14 14 20 5"/></svg>
-          Çoklu Çizgi (Polyline)
-        </button>
-        <button class="draw-opt" data-cadtool="rect">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
-          Dikdörtgen
-        </button>
-      </div>
-    </div>
-
-    <div class="color-btn-wrap">
-      <button class="tool-btn" id="snapMenuBtn" title="Ortho ve Snap Ayarları">
-        ⟂ Ortho & Snap ▾
-      </button>
-      <div id="snapMenuPanel">
-        <div class="snap-item on" id="toggleOrthoRow">
-          <span>Yatay/Dikey Kilit (Ortho)</span>
-          <span id="orthoStatusText">✓</span>
-        </div>
-        <div style="height:1px;background:var(--grid-line);margin:4px 0;"></div>
-        <div class="snap-item on" data-key="endpoint">Uç Nokta (Endpoint) ✓</div>
-        <div class="snap-item on" data-key="midpoint">Orta Nokta (Midpoint) ✓</div>
-        <div class="snap-item on" data-key="tracking">AutoCAD Hizalama (Tracking 90°) ✓</div>
-      </div>
-    </div>
-
-    <!-- Görünüm & Tema Düzenleyici Menü -->
-    <div class="color-btn-wrap">
-      <button class="tool-btn" id="viewSettingsBtn" title="Görünüm ve Tema">
-        ⚙️ Görünüm ▾
-      </button>
-      <div id="viewSettingsPopover">
-        <div class="pop-title">Sayfa Renk Teması</div>
-        <div class="theme-grid">
-          <div class="theme-chip active" data-theme="" style="background:#F7F5EF;color:#1B2430">Varsayılan</div>
-          <div class="theme-chip" data-theme="theme-light-grey" style="background:#E9ECEF;color:#212529">Açık Gri</div>
-          <div class="theme-chip" data-theme="theme-sepia" style="background:#F4ECD8;color:#4A3B32">Sepya</div>
-          <div class="theme-chip" data-theme="theme-cream" style="background:#FFFDD0;color:#333">Krem</div>
-          <div class="theme-chip" data-theme="theme-pale-blue" style="background:#E8F1F5;color:#1C2D37">Açık Mavi</div>
-          <div class="theme-chip" data-theme="theme-pale-green" style="background:#EAF2E8;color:#1F331C">Açık Yeşil</div>
-        </div>
-        
-        <div style="height:1px;background:var(--grid-line);margin:4px 0;"></div>
-        
-        <div class="pop-title">Izgara Kare Boyutu</div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="range" id="gridSizeSlider" min="15" max="50" value="26" style="flex:1">
-          <span id="gridSizeLabel" style="font-size:12px;font-weight:bold;width:32px">26px</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="color-btn-wrap">
-      <div class="color-btn" id="penColorBtn" style="background:#1B2430" title="Renk"></div>
-      <div class="color-popover" id="penColorPop">
-        <div class="swatch active" style="background:#1B2430" data-color="#1B2430"></div>
-        <div class="swatch" style="background:#2B4C7E" data-color="#2B4C7E"></div>
-        <div class="swatch" style="background:#B23A48" data-color="#B23A48"></div>
-        <div class="swatch" style="background:#E8A33D" data-color="#E8A33D"></div>
-      </div>
-    </div>
-
-    <button class="tool-btn" data-tool="eraser" title="Noktasal Silgi">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13l-8 8H5l-2-2 11-11 6 6-2 2z"/><path d="M13 6l5 5"/></svg>
-    </button>
-    <button class="tool-btn" data-tool="pan" title="Kaydır">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
-    </button>
-
-    <button class="tool-btn" id="undoBtn" title="Geri Al" disabled>
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
-    </button>
-    
-    <div class="tool-sep"></div>
-
-    <button class="tool-btn" data-tool="note" title="Not Kutusu">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
-    </button>
-
-    <div class="color-btn-wrap">
-      <div class="color-btn" id="noteColorBtn" style="background:#FFD966" title="Not Rengi"></div>
-      <div class="color-popover" id="noteColorPop">
-        <div class="swatch active" style="background:#FFD966" data-color="#FFD966"></div>
-        <div class="swatch" style="background:#A8D8B9" data-color="#A8D8B9"></div>
-        <div class="swatch" style="background:#A9CCE3" data-color="#A9CCE3"></div>
-        <div class="swatch" style="background:#F2B5A0" data-color="#F2B5A0"></div>
-        <div class="swatch" style="background:#C9B6E4" data-color="#C9B6E4"></div>
-      </div>
-    </div>
-
-    <div class="tool-sep"></div>
-
-    <button class="tool-btn" id="photoBtn" title="Fotoğraf ekle">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/></svg>
-    </button>
-    <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
-
-    <div class="tool-sep"></div>
-
-    <!-- Dışa Aktarma Araçları -->
-    <button class="tool-btn" id="exportBtn" title="Excel Dışa Aktar">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
-      Excel
-    </button>
-    <button class="tool-btn" id="exportPdfBtn" title="PDF Dışa Aktar">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      PDF
-    </button>
-    <button class="tool-btn danger" id="clearDayBtn" title="Günü Temizle">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
-    </button>
+    <button class="tool" data-tool="pen" title="Serbest Kalem">✏️</button>
+    <input type="color" id="penColor" class="tool" value="#1d4ed8" title="Kalem Rengi">
+    <button class="tool" data-tool="eraser" title="Noktasal Silgi">🧽</button>
+    <div class="sep"></div>
+    <button class="tool" data-tool="line" title="Çizgi">📏</button>
+    <button class="tool" data-tool="mdf" title="18mm MDF Çizgi">🟫</button>
+    <button class="tool" data-tool="dim" title="Ölçülendirme">📐</button>
+    <button class="tool" data-tool="polyline" title="Çoklu Çizgi">🖇️</button>
+    <button class="tool" data-tool="rect" title="Dikdörtgen">▭</button>
+    <button class="tool" id="finishPolyBtn" title="Çizgiyi Bitir">✔ Bitir</button>
+    <div class="sep"></div>
+    <button class="tool" data-tool="select" title="Seç / Taşı">🖱️</button>
+    <button class="tool" id="deleteSelBtn" title="Sil">🗑️</button>
+    <button class="tool" id="copySelBtn" title="Kopyala">📋</button>
+    <button class="tool" id="pasteSelBtn" title="Yapıştır">📌</button>
+    <div class="sep"></div>
+    <button class="tool toggle" id="orthoBtn" title="Ortho (Yatay/Dikey Kilit)">⊥</button>
+    <button class="tool toggle on" id="snapBtn" title="Snap (Endpoint/Midpoint)">🧲</button>
+    <div class="sep"></div>
+    <button class="tool" id="addPhotoBtn" title="Fotoğraf Ekle">🖼️</button>
+    <button class="tool" id="addNoteBtn" title="Not Ekle">🗒️</button>
+    <div class="sep"></div>
+    <select id="themeSelect" class="tool" title="Sayfa Teması">
+      <option value="theme-default">Varsayılan</option>
+      <option value="theme-sepya">Sepya</option>
+      <option value="theme-krem">Krem</option>
+      <option value="theme-gri">Açık Gri</option>
+      <option value="theme-mavi">Açık Mavi</option>
+      <option value="theme-yesil">Açık Yeşil</option>
+    </select>
+    <select id="gridSelect" class="tool" title="Izgara Boyutu">
+      <option value="0">Izgara Yok</option>
+      <option value="10">Küçük (10px)</option>
+      <option value="20" selected>Orta (20px)</option>
+      <option value="40">Büyük (40px)</option>
+    </select>
+    <div class="sep"></div>
+    <button class="tool" id="exportExcelBtn" title="Excel'e Aktar">📊 Excel</button>
+    <button class="tool" id="exportPdfBtn" title="PDF'e Aktar">📄 PDF</button>
   </div>
 
-  <div id="canvasWrap">
-    <div id="canvasInner">
-      <canvas id="inkCanvas"></canvas>
-      <div id="overlay"></div>
-    </div>
-    <div id="toast"></div>
-  </div>
-
-  <div id="polyBar">
-    <button id="polyDone">✓ Çizimi Bitir</button>
-    <button id="polyCancel">✕ İptal</button>
-  </div>
-
-  <div id="selectBar">
-    <button id="btnCopySelected">📋 Kopyala & Yapıştır</button>
-    <button id="btnDeleteSelected">🗑 Seçilenleri Sil</button>
-    <button id="btnDeselectAll">✕ İptal</button>
-  </div>
-
-  <div id="pageNav">
-    <button id="pagePrev" title="Önceki Sayfa">▲</button>
-    <span id="pageLabel">1/1</span>
-    <button id="pageNext" title="Sonraki Sayfa">▼</button>
-  </div>
-
+  <!-- WORKSPACE -->
+  <div id="workspace"></div>
+  <div id="addPageBar"><button id="addPageBtn">＋ Yeni Sayfa Ekle</button></div>
 </div>
 
-<div id="dimEditor">
-  <span>Yeni Ölçü (px):</span>
-  <input type="number" id="dimValueInput" step="any">
-  <button id="dimApplyBtn">Tamam</button>
-</div>
+<input type="file" id="fileInputPhoto" accept="image/*" multiple>
+<div id="toast"></div>
 
 <script>
-// --- FIREBASE KURULUMU ---
+(function(){
+"use strict";
+
+/* ============================================================
+   AYARLAR
+============================================================ */
+const APP_PASSWORD = "156155";
+const MM_PER_PX = 25.4 / 96;      // 96dpi ekran varsayımı
+const PX_PER_MM = 96 / 25.4;      // ~3.7795
+const CANVAS_W = 1240, CANVAS_H = 1754; // A4 @ ~150dpi dahili çözünürlük
+const SNAP_TOL = 22;      // dahili px
+const HIT_TOL  = 16;      // seçim tolerans dahili px
+
 const firebaseConfig = {
   apiKey: "AIzaSyD-cad-notlarim-api-key-12345",
   authDomain: "cad-notlarim.firebaseapp.com",
@@ -484,1512 +194,816 @@ const firebaseConfig = {
   messagingSenderId: "123456789012",
   appId: "1:123456789012:web:cadnotlarimapp123"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
 
-// --- ŞİFRE KORUMASI ---
-const MASTER_PIN = "156155"; 
-const lockOverlay = document.getElementById("lockOverlay");
-const passInput = document.getElementById("passInput");
-const unlockBtn = document.getElementById("unlockBtn");
+let fbApp=null, fbDb=null, fbReady=false;
+try{
+  fbApp = firebase.initializeApp(firebaseConfig);
+  fbDb = firebase.database();
+  fbReady = true;
+}catch(e){ console.warn("Firebase başlatılamadı:", e); fbReady=false; }
 
-unlockBtn.onclick = checkPass;
-passInput.onkeyup = (e) => { if(e.key === "Enter") checkPass(); };
+/* ============================================================
+   YARDIMCI FONKSİYONLAR
+============================================================ */
+function pad2(n){ return n<10 ? "0"+n : ""+n; }
+function toISO(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+function fromISO(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+function fmtLabel(iso){
+  const d = fromISO(iso);
+  const days=["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  const months=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  return d.getDate()+" "+months[d.getMonth()]+" "+d.getFullYear()+" "+days[d.getDay()];
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function dist(x1,y1,x2,y2){ return Math.hypot(x2-x1,y2-y1); }
+function distToSeg(px,py,x1,y1,x2,y2){
+  const A=px-x1, B=py-y1, C=x2-x1, D=y2-y1;
+  const dot=A*C+B*D, len=C*C+D*D;
+  let t = len!==0 ? dot/len : -1;
+  t = Math.max(0,Math.min(1,t));
+  const xx=x1+t*C, yy=y1+t*D;
+  return dist(px,py,xx,yy);
+}
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(showToast._h);
+  showToast._h=setTimeout(()=>t.classList.remove("show"),1800);
+}
+function debounce(fn,ms){ let h; return function(...a){ clearTimeout(h); h=setTimeout(()=>fn.apply(this,a),ms); }; }
 
-function checkPass(){
-  if(passInput.value === MASTER_PIN){
-    lockOverlay.classList.add("unlocked");
-    showToast("Giriş Başarılı");
-  } else {
-    alert("Hatalı Şifre!");
-    passInput.value = "";
+/* ============================================================
+   DURUM (STATE)
+============================================================ */
+let currentDate = toISO(new Date());
+let dayData = { pages: [] };   // { pages: [ {id,theme,gridSize,strokes:[],boxes:[]} ] }
+let activeTool = "pen";
+let orthoOn = false;
+let snapOn = true;
+let penColor = "#1d4ed8";
+let clipboardStroke = null;
+let selection = null; // {pageId, index}
+let suppressRemoteEcho = false;
+
+function newPage(theme,grid){
+  return { id: uid(), theme: theme||"theme-default", gridSize: (grid===undefined?20:grid), strokes: [], boxes: [] };
+}
+function blankDay(){ return { pages: [ newPage() ] }; }
+
+/* ============================================================
+   YEREL DEPOLAMA (localStorage yedek/önbellek)
+============================================================ */
+function localKey(iso){ return "cadnotdefteri_"+iso; }
+function saveLocal(iso, data){
+  try{ localStorage.setItem(localKey(iso), JSON.stringify(data)); }catch(e){ console.warn("local kayıt hatası",e); }
+}
+function loadLocal(iso){
+  try{ const raw=localStorage.getItem(localKey(iso)); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+}
+
+/* ============================================================
+   FIREBASE SENKRON
+============================================================ */
+const syncDot = document.getElementById("syncDot");
+function setSyncState(state){
+  syncDot.classList.remove("on","busy");
+  if(state==="on") syncDot.classList.add("on");
+  else if(state==="busy") syncDot.classList.add("busy");
+}
+let currentDayRef = null;
+let currentListener = null;
+
+function attachFirebaseListener(iso){
+  if(!fbReady) return;
+  if(currentDayRef && currentListener) currentDayRef.off("value", currentListener);
+  currentDayRef = fbDb.ref("notlar/"+iso);
+  setSyncState("busy");
+  currentListener = currentDayRef.on("value", snap=>{
+    const val = snap.val();
+    if(iso !== currentDate) return; // kullanıcı başka güne geçtiyse yoksay
+    if(val && val.json){
+      try{
+        const parsed = JSON.parse(val.json);
+        suppressRemoteEcho = true;
+        dayData = parsed;
+        saveLocal(iso, dayData);
+        renderAllPages();
+        suppressRemoteEcho = false;
+      }catch(e){ console.warn("Firebase veri ayrıştırma hatası",e); }
+    }
+    setSyncState("on");
+  }, err=>{
+    console.warn("Firebase okuma hatası",err);
+    setSyncState("off");
+  });
+}
+
+const pushToFirebase = debounce(function(){
+  if(!fbReady) return;
+  if(suppressRemoteEcho) return;
+  setSyncState("busy");
+  fbDb.ref("notlar/"+currentDate).set({ json: JSON.stringify(dayData), updatedAt: Date.now() })
+    .then(()=>setSyncState("on"))
+    .catch(err=>{ console.warn("Firebase yazma hatası",err); setSyncState("off"); });
+}, 700);
+
+function persist(){
+  saveLocal(currentDate, dayData);
+  pushToFirebase();
+}
+
+/* ============================================================
+   GÜN YÜKLE / DEĞİŞTİR
+============================================================ */
+function loadDay(iso){
+  currentDate = iso;
+  document.getElementById("dateLabel").textContent = fmtLabel(iso);
+  document.getElementById("dateInput").value = iso;
+  const local = loadLocal(iso);
+  dayData = local && local.pages && local.pages.length ? local : blankDay();
+  renderAllPages();
+  attachFirebaseListener(iso);
+}
+
+/* ============================================================
+   SAYFA / CANVAS OLUŞTURMA (DOM)
+============================================================ */
+const workspace = document.getElementById("workspace");
+
+function renderAllPages(){
+  workspace.innerHTML = "";
+  dayData.pages.forEach((page, idx)=> workspace.appendChild(buildPageDOM(page, idx)));
+}
+
+function buildPageDOM(page, idx){
+  const wrap = document.createElement("div");
+  wrap.className = "pageWrap "+page.theme;
+  wrap.dataset.pageId = page.id;
+
+  const label = document.createElement("div");
+  label.className = "pageLabel";
+  label.textContent = "Sayfa "+(idx+1);
+  wrap.appendChild(label);
+
+  if(dayData.pages.length>1){
+    const del = document.createElement("button");
+    del.className = "delPageBtn"; del.textContent="×"; del.title="Sayfayı Sil";
+    del.onclick = ()=>{
+      if(confirm("Bu sayfayı silmek istiyor musunuz?")){
+        dayData.pages = dayData.pages.filter(p=>p.id!==page.id);
+        renderAllPages(); persist();
+      }
+    };
+    wrap.appendChild(del);
+  }
+
+  const gridCanvas = document.createElement("canvas");
+  gridCanvas.className="gridLayer"; gridCanvas.width=CANVAS_W; gridCanvas.height=CANVAS_H;
+  wrap.appendChild(gridCanvas);
+
+  const ink = document.createElement("canvas");
+  ink.className="inkCanvas"; ink.width=CANVAS_W; ink.height=CANVAS_H;
+  wrap.appendChild(ink);
+
+  const overlay = document.createElement("div");
+  overlay.className="overlay";
+  wrap.appendChild(overlay);
+
+  drawGrid(gridCanvas, page.gridSize);
+  drawStrokes(ink, page.strokes, selection && selection.pageId===page.id ? selection.index : -1);
+  page.boxes.forEach(b=> overlay.appendChild(buildBoxDOM(page,b)));
+
+  wirePagePointer(wrap, ink, page);
+  return wrap;
+}
+
+function refreshPage(pageId){
+  const wrap = workspace.querySelector('.pageWrap[data-page-id="'+pageId+'"]');
+  if(!wrap) return;
+  const page = dayData.pages.find(p=>p.id===pageId);
+  if(!page) return;
+  wrap.className = "pageWrap "+page.theme;
+  const ink = wrap.querySelector(".inkCanvas");
+  drawStrokes(ink, page.strokes, selection && selection.pageId===page.id ? selection.index : -1);
+  const grid = wrap.querySelector(".gridLayer");
+  drawGrid(grid, page.gridSize);
+  const overlay = wrap.querySelector(".overlay");
+  overlay.innerHTML="";
+  page.boxes.forEach(b=> overlay.appendChild(buildBoxDOM(page,b)));
+}
+
+/* ============================================================
+   IZGARA ÇİZİMİ
+============================================================ */
+function drawGrid(canvas, size){
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!size || size<=0) return;
+  ctx.strokeStyle = "rgba(0,0,0,0.10)";
+  ctx.lineWidth = 1;
+  for(let x=0;x<=canvas.width;x+=size){
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  for(let y=0;y<=canvas.height;y+=size){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
   }
 }
 
-(function(){
-  "use strict";
-
-  const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
-  const AYLAR_KISA = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
-  const GUNLER = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
-  const GUNLER_KISA = ["Pz","Pt","Sa","Ça","Pe","Cu","Ct"];
-
-  function pad(n){return n<10?"0"+n:""+n;}
-  function keyOf(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
-  
-  function formatCustomDate(d){
-    const dayNum = d.getDate();
-    const monthStr = AYLAR_KISA[d.getMonth()];
-    const dayStr = GUNLER_KISA[d.getDay()];
-    const yearStr = String(d.getFullYear()).slice(-2);
-    return `${dayNum} ${monthStr} ${dayStr} ${yearStr}`;
+/* ============================================================
+   ÇİZİM (STROKES) ÇİZDİRME
+============================================================ */
+function strokeCandidatePoints(s){
+  // snap için uç/orta noktalar
+  const pts=[];
+  if(s.type==="pen"){
+    if(s.points.length){ pts.push(s.points[0]); pts.push(s.points[s.points.length-1]); }
+  } else if(s.type==="line" || s.type==="mdf" || s.type==="dim"){
+    pts.push({x:s.x1,y:s.y1},{x:s.x2,y:s.y2},{x:(s.x1+s.x2)/2,y:(s.y1+s.y2)/2});
+  } else if(s.type==="rect"){
+    pts.push({x:s.x1,y:s.y1},{x:s.x2,y:s.y1},{x:s.x1,y:s.y2},{x:s.x2,y:s.y2},
+              {x:(s.x1+s.x2)/2,y:s.y1},{x:(s.x1+s.x2)/2,y:s.y2},{x:s.x1,y:(s.y1+s.y2)/2},{x:s.x2,y:(s.y1+s.y2)/2});
+  } else if(s.type==="polyline"){
+    s.points.forEach((p,i)=>{
+      pts.push(p);
+      if(i>0){ const q=s.points[i-1]; pts.push({x:(p.x+q.x)/2,y:(p.y+q.y)/2}); }
+    });
   }
+  return pts;
+}
 
-  function sameDay(a,b){return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();}
-  function uid(){return Math.random().toString(36).slice(2,9);}
-  const STORAGE_PREFIX = "gnd_";
+function allCandidatePoints(strokes, excludeIdx){
+  let all=[];
+  strokes.forEach((s,i)=>{ if(i!==excludeIdx) all = all.concat(strokeCandidatePoints(s)); });
+  return all;
+}
 
-  let current = new Date();
-  let calViewDate = new Date(current);
-  let day = {ink:[], texts:[], notes:[], images:[]};
-  let tool = "pen"; 
-  let penColor = "#1B2430";
-  let noteColor = "#FFD966";
-  let saveTimer = null;
-  let contentHeight = 0;
+function drawArrowHead(ctx,x,y,angle,size){
+  ctx.save();
+  ctx.translate(x,y); ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.lineTo(-size, size*0.42);
+  ctx.lineTo(-size, -size*0.42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
 
-  let orthoEnabled = true;
-  let snapSettings = { endpoint: true, midpoint: true, tracking: true };
-  let previewItem = null;
-  let lineStart = null;
-  let polyPts = null;
-  let activeSnapMarker = null;
-  let activeTrackingLines = [];
-
-  let undoStack = [];
-  const UNDO_LIMIT = 30;
-  function pushUndoSnapshot(){
-    try{
-      undoStack.push(JSON.stringify(day.ink));
-      if(undoStack.length > UNDO_LIMIT) undoStack.shift();
-      updateUndoBtn();
-    }catch(e){ }
+function drawSingleStroke(ctx, s, highlighted){
+  ctx.save();
+  if(highlighted){ ctx.shadowColor="#f59e0b"; ctx.shadowBlur=10; }
+  if(s.type==="pen"){
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.width||3;
+    ctx.lineJoin="round"; ctx.lineCap="round";
+    ctx.beginPath();
+    s.points.forEach((p,i)=> i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.stroke();
+  } else if(s.type==="line"){
+    ctx.strokeStyle = highlighted?"#f59e0b":(s.color||"#111827"); ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+    const mm = dist(s.x1,s.y1,s.x2,s.y2)/PX_PER_MM;
+    const mx=(s.x1+s.x2)/2, my=(s.y1+s.y2)/2;
+    ctx.font="20px sans-serif"; ctx.fillStyle="#111827";
+    ctx.textAlign="center"; ctx.textBaseline="bottom";
+    ctx.fillText(mm.toFixed(0)+" mm", mx, my-6);
+  } else if(s.type==="mdf"){
+    const thickness = 18*PX_PER_MM;
+    const dx=s.x2-s.x1, dy=s.y2-s.y1; const len=Math.hypot(dx,dy)||1;
+    const nx=-dy/len, ny=dx/len;
+    const hw=thickness/2;
+    ctx.beginPath();
+    ctx.moveTo(s.x1+nx*hw, s.y1+ny*hw);
+    ctx.lineTo(s.x2+nx*hw, s.y2+ny*hw);
+    ctx.lineTo(s.x2-nx*hw, s.y2-ny*hw);
+    ctx.lineTo(s.x1-nx*hw, s.y1-ny*hw);
+    ctx.closePath();
+    ctx.fillStyle = highlighted? "rgba(245,158,11,0.55)" : "rgba(120,53,15,0.35)";
+    ctx.strokeStyle = highlighted? "#f59e0b" : "#78350f";
+    ctx.lineWidth = 2;
+    ctx.fill(); ctx.stroke();
+    const mm = dist(s.x1,s.y1,s.x2,s.y2)/PX_PER_MM;
+    const mx=(s.x1+s.x2)/2, my=(s.y1+s.y2)/2;
+    ctx.font="18px sans-serif"; ctx.fillStyle="#111827"; ctx.textAlign="center"; ctx.textBaseline="bottom";
+    ctx.fillText("18mm MDF · "+mm.toFixed(0)+"mm", mx, my-hw-6);
+  } else if(s.type==="dim"){
+    const col = highlighted? "#f59e0b" : "#dc2626";
+    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+    const angle = Math.atan2(s.y2-s.y1, s.x2-s.x1);
+    drawArrowHead(ctx, s.x1, s.y1, angle+Math.PI, 12);
+    drawArrowHead(ctx, s.x2, s.y2, angle, 12);
+    const mm = dist(s.x1,s.y1,s.x2,s.y2)/PX_PER_MM;
+    const mx=(s.x1+s.x2)/2, my=(s.y1+s.y2)/2;
+    ctx.save(); ctx.translate(mx,my); ctx.rotate(angle);
+    ctx.font="19px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="bottom";
+    ctx.fillText(mm.toFixed(1)+" mm", 0, -6);
+    ctx.restore();
+  } else if(s.type==="polyline"){
+    ctx.strokeStyle = highlighted?"#f59e0b":(s.color||"#111827"); ctx.lineWidth=2.4;
+    ctx.lineJoin="round";
+    ctx.beginPath();
+    s.points.forEach((p,i)=> i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.stroke();
+    ctx.fillStyle = ctx.strokeStyle;
+    s.points.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill(); });
+  } else if(s.type==="rect"){
+    ctx.strokeStyle = highlighted?"#f59e0b":(s.color||"#111827"); ctx.lineWidth=2.4;
+    ctx.strokeRect(Math.min(s.x1,s.x2), Math.min(s.y1,s.y2), Math.abs(s.x2-s.x1), Math.abs(s.y2-s.y1));
+    const w = Math.abs(s.x2-s.x1)/PX_PER_MM, h=Math.abs(s.y2-s.y1)/PX_PER_MM;
+    ctx.font="17px sans-serif"; ctx.fillStyle="#111827"; ctx.textAlign="left"; ctx.textBaseline="top";
+    ctx.fillText(w.toFixed(0)+" x "+h.toFixed(0)+" mm", Math.min(s.x1,s.x2)+4, Math.min(s.y1,s.y2)+4);
   }
-  function updateUndoBtn(){
-    document.getElementById("undoBtn").disabled = undoStack.length === 0;
-  }
+  ctx.restore();
+}
 
-  const weekdayLabel = document.getElementById("weekdayLabel");
-  const fullDateLabel = document.getElementById("fullDateLabel");
-  const canvas = document.getElementById("inkCanvas");
+function drawStrokes(canvas, strokes, highlightIdx){
   const ctx = canvas.getContext("2d");
-  const overlay = document.getElementById("overlay");
-  const wrap = document.getElementById("canvasWrap");
-  const canvasInner = document.getElementById("canvasInner");
-  const toast = document.getElementById("toast");
-  const dimEditor = document.getElementById("dimEditor");
-  const dimValueInput = document.getElementById("dimValueInput");
-  let activeEditLine = null;
-  
-  // Firebase listener referansı
-  let firebaseListener = null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  strokes.forEach((s,i)=> drawSingleStroke(ctx, s, i===highlightIdx));
+}
 
-  function loadDay(d){
-    const dayKey = keyOf(d);
-    const raw = localStorage.getItem(STORAGE_PREFIX + dayKey);
-    if(raw){
-      try{ day = JSON.parse(raw); }catch(e){ day = {ink:[],texts:[],notes:[],images:[]}; }
-    } else {
-      day = {ink:[], texts:[], notes:[], images:[]};
-    }
-    if(!day.ink) day.ink=[];
-    if(!day.texts) day.texts=[];
-    if(!day.notes) day.notes=[];
-    if(!day.images) day.images=[];
-    if(!day.pageCount) day.pageCount = 1;
-    day.ink.forEach(it=>{ if(!it.id) it.id = uid(); });
-    undoStack = [];
-    updateUndoBtn();
+/* ============================================================
+   KUTU (NOT / RESİM) DOM OLUŞTURMA
+============================================================ */
+function buildBoxDOM(page, box){
+  const el = document.createElement("div");
+  el.className = "box "+(box.type==="note"?"note":"image")+(box.locked?" locked":"");
+  el.style.left = box.x+"px"; el.style.top = box.y+"px";
+  el.style.width = box.w+"px"; el.style.height = box.h+"px";
+  if(box.type==="note" && box.color) el.style.background = box.color;
 
-    // Eski listener'ı temizle
-    if(firebaseListener) {
-      firebaseListener();
-      firebaseListener = null;
-    }
-
-    // Yeni listener
-    const ref = db.ref('cad_notes/' + dayKey);
-    firebaseListener = ref.on('value', (snapshot) => {
-      const cloudData = snapshot.val();
-      if(cloudData){
-        // AKILLI BİRLEŞTİRME - Verileri koru
-        const localInk = day.ink || [];
-        const localTexts = day.texts || [];
-        const localNotes = day.notes || [];
-        const localImages = day.images || [];
-        const localPageCount = day.pageCount || 1;
-        
-        // Cloud verilerini al
-        const cloudInk = cloudData.ink || [];
-        const cloudTexts = cloudData.texts || [];
-        const cloudNotes = cloudData.notes || [];
-        const cloudImages = cloudData.images || [];
-        const cloudPageCount = cloudData.pageCount || 1;
-        
-        // En güncel veriyi birleştir (cloud daha güncel kabul edilir, ancak yerel değişiklikler korunur)
-        // Basit strateji: Cloud'dan gelen verilerle yerel verileri birleştir
-        // Daha karmaşık bir strateji için timestamp kullanılabilir
-        day.ink = cloudInk.length > 0 ? cloudInk : localInk;
-        day.texts = cloudTexts.length > 0 ? cloudTexts : localTexts;
-        day.notes = cloudNotes.length > 0 ? cloudNotes : localNotes;
-        day.images = cloudImages.length > 0 ? cloudImages : localImages;
-        day.pageCount = cloudPageCount || localPageCount;
-        
-        // ID'leri kontrol et
-        day.ink.forEach(it=>{ if(!it.id) it.id = uid(); });
-        
-        renderAll();
-        showToast("Buluttan veriler alındı ve birleştirildi ☁️");
-      }
-    });
+  const bar = document.createElement("div"); bar.className="boxBar";
+  if(box.type==="note"){
+    const okBtn = document.createElement("button"); okBtn.className="ok";
+    okBtn.textContent = box.locked ? "✎" : "✓";
+    okBtn.title = box.locked ? "Düzenle" : "Kilitle";
+    okBtn.onclick = (ev)=>{ ev.stopPropagation(); box.locked = !box.locked; refreshPage(page.id); persist(); };
+    bar.appendChild(okBtn);
+    const colorBtn = document.createElement("input");
+    colorBtn.type="color"; colorBtn.value = box.color||"#fff59d";
+    colorBtn.style.width="20px"; colorBtn.style.height="18px"; colorBtn.style.border="none"; colorBtn.style.padding="0"; colorBtn.style.background="none";
+    colorBtn.oninput = (ev)=>{ box.color=ev.target.value; el.style.background=box.color; persist(); };
+    bar.appendChild(colorBtn);
   }
-
-  function saveDayNow(){
-    day.ink.forEach(it=>{ if(it.selected) it.selected = false; });
-    const dayKey = keyOf(current);
-    localStorage.setItem(STORAGE_PREFIX + dayKey, JSON.stringify(day));
-    
-    db.ref('cad_notes/' + dayKey).set(day).then(() => {
-      // Sadece başarılı olduğunda bildir
-    }).catch(err => {
-      console.warn("Firebase kayıt hatası:", err);
-    });
-    // showToast("Buluta Senkronize Edildi ☁️");
-  }
-
-  function saveDaySoon(){
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveDayNow, 450);
-  }
-  let toastTimer=null;
-  function showToast(msg){
-    toast.textContent = msg;
-    toast.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=>toast.classList.remove("show"), 1200);
-  }
-
-  function renderHeader(){
-    weekdayLabel.textContent = GUNLER[current.getDay()];
-    fullDateLabel.textContent = current.getDate()+" "+AYLAR[current.getMonth()]+" "+current.getFullYear();
-  }
-  document.getElementById("prevDay").onclick = ()=>changeDate(-1);
-  document.getElementById("nextDay").onclick = ()=>changeDate(1);
-  document.getElementById("todayBtn").onclick = ()=>{ goToDate(new Date()); };
-
-  function changeDate(delta){
-    const d = new Date(current);
-    d.setDate(d.getDate()+delta);
-    goToDate(d);
-  }
-  function goToDate(d){
-    saveDayNow();
-    current = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    calViewDate = new Date(current);
-    loadDay(current);
-    renderHeader();
-    renderAll();
-    wrap.scrollTop = 0;
-    renderCalendar();
-  }
-
-  const calPop = document.getElementById("calPopover");
-  const calGrid = document.getElementById("calGrid");
-  const calMonthLabel = document.getElementById("calMonthLabel");
-
-  document.getElementById("calToggle").onclick = ()=>{
-    calPop.classList.toggle("open");
-    if(calPop.classList.contains("open")) renderCalendar();
-  };
-  document.getElementById("dateBlock").onclick = ()=>{
-    calPop.classList.toggle("open");
-    if(calPop.classList.contains("open")) renderCalendar();
-  };
-  document.getElementById("calPrevMonth").onclick = (e)=>{e.stopPropagation();calViewDate.setMonth(calViewDate.getMonth()-1);renderCalendar();};
-  document.getElementById("calNextMonth").onclick = (e)=>{e.stopPropagation();calViewDate.setMonth(calViewDate.getMonth()+1);renderCalendar();};
-
-  function renderCalendar(){
-    calMonthLabel.textContent = AYLAR[calViewDate.getMonth()]+" "+calViewDate.getFullYear();
-    calGrid.innerHTML = "";
-    GUNLER_KISA.forEach(g=>{
-      const el = document.createElement("div");
-      el.className="cal-dow"; el.textContent=g;
-      calGrid.appendChild(el);
-    });
-    const first = new Date(calViewDate.getFullYear(), calViewDate.getMonth(), 1);
-    const startOffset = first.getDay();
-    const gridStart = new Date(first);
-    gridStart.setDate(gridStart.getDate()-startOffset);
-    const today = new Date();
-    for(let i=0;i<42;i++){
-      const d = new Date(gridStart);
-      d.setDate(gridStart.getDate()+i);
-      const el = document.createElement("div");
-      el.className = "cal-day" + (d.getMonth()!==calViewDate.getMonth()?" other":"");
-      if(sameDay(d,today)) el.classList.add("today");
-      if(sameDay(d,current)) el.classList.add("selected");
-      el.textContent = d.getDate();
-      if(hasContent(d)){
-        const dot = document.createElement("div");
-        dot.className="dot";
-        el.appendChild(dot);
-      }
-      el.addEventListener("click", (()=>{ const dd=new Date(d); return ()=>{ goToDate(dd); calPop.classList.remove("open"); }; })());
-      calGrid.appendChild(el);
-    }
-  }
-  function hasContent(d){
-    if(sameDay(d,current)){
-      return (day.ink&&day.ink.length) || (day.texts&&day.texts.length) || (day.notes&&day.notes.length) || (day.images&&day.images.length);
-    }
-    const raw = localStorage.getItem(STORAGE_PREFIX + keyOf(d));
-    if(!raw) return false;
-    try{
-      const p = JSON.parse(raw);
-      return (p.ink&&p.ink.length) || (p.texts&&p.texts.length) || (p.notes&&p.notes.length) || (p.images&&p.images.length);
-    }catch(e){ return false; }
-  }
-
-  const cadDrawBtn = document.getElementById("cadDrawBtn");
-  const cadDrawPop = document.getElementById("cadDrawPopover");
-  const snapMenuBtn = document.getElementById("snapMenuBtn");
-  const snapMenuPanel = document.getElementById("snapMenuPanel");
-  const viewSettingsBtn = document.getElementById("viewSettingsBtn");
-  const viewSettingsPopover = document.getElementById("viewSettingsPopover");
-
-  viewSettingsBtn.addEventListener("click", (e)=>{
-    e.stopPropagation();
-    viewSettingsPopover.classList.toggle("open");
-    if(viewSettingsPopover.classList.contains("open")){
-      const r = viewSettingsBtn.getBoundingClientRect();
-      viewSettingsPopover.style.left = Math.max(6, Math.min(r.left, window.innerWidth-250))+"px";
-      viewSettingsPopover.style.top = (r.bottom+6)+"px";
-    }
-  });
-
-  viewSettingsPopover.querySelectorAll(".theme-chip").forEach(chip => {
-    chip.addEventListener("click", ()=>{
-      viewSettingsPopover.querySelectorAll(".theme-chip").forEach(c=>c.classList.remove("active"));
-      chip.classList.add("active");
-      document.body.className = chip.dataset.theme;
-      redrawInk();
-    });
-  });
-
-  const gridSizeSlider = document.getElementById("gridSizeSlider");
-  const gridSizeLabel = document.getElementById("gridSizeLabel");
-  gridSizeSlider.addEventListener("input", (e)=>{
-    const val = e.target.value;
-    gridSizeLabel.textContent = val + "px";
-    document.documentElement.style.setProperty('--grid-size', val + "px");
-  });
-
-  snapMenuBtn.addEventListener("click", (e)=>{
-    e.stopPropagation();
-    snapMenuPanel.classList.toggle("open");
-    if(snapMenuPanel.classList.contains("open")){
-      const r = snapMenuBtn.getBoundingClientRect();
-      snapMenuPanel.style.left = Math.max(6, Math.min(r.left, window.innerWidth-220))+"px";
-      snapMenuPanel.style.top = (r.bottom+6)+"px";
-    }
-  });
-
-  document.getElementById("toggleOrthoRow").addEventListener("click", (e)=>{
-    e.stopPropagation();
-    orthoEnabled = !orthoEnabled;
-    document.getElementById("toggleOrthoRow").classList.toggle("on", orthoEnabled);
-    document.getElementById("orthoStatusText").textContent = orthoEnabled ? "✓" : "";
-    showToast(orthoEnabled ? "Ortho Açık" : "Ortho Kapalı");
-  });
-
-  snapMenuPanel.querySelectorAll("[data-key]").forEach(item=>{
-    item.addEventListener("click", (e)=>{
-      e.stopPropagation();
-      const k = item.dataset.key;
-      snapSettings[k] = !snapSettings[k];
-      item.classList.toggle("on", snapSettings[k]);
-      item.textContent = item.textContent.replace(" ✓","") + (snapSettings[k] ? " ✓" : "");
-      showToast(snapSettings[k] ? k + " aktif" : k + " pasif");
-    });
-  });
-
-  function selectTool(name){
-    if(tool==="polyline" && name!=="polyline" && polyPts){
-      polyPts = null; previewItem = null; redrawInk();
-      document.getElementById("polyBar").classList.remove("show");
-    }
-    if(tool==="select" && name!=="select"){
-      day.ink.forEach(it=>it.selected=false);
-      document.getElementById("selectBar").classList.remove("show");
-    }
-    tool = name;
-    document.querySelectorAll(".tool-btn").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".draw-opt").forEach(b=>b.classList.remove("active"));
-    
-    if(["line","mdf18","dimension","polyline","rect","select"].includes(name)){
-      cadDrawBtn.classList.add("active");
-      const activeOpt = cadDrawPop.querySelector(`[data-cadtool="${name}"]`);
-      if(activeOpt) activeOpt.classList.add("active");
-      redrawInk();
-    } else {
-      const btn = document.querySelector(`.tool-btn[data-tool="${name}"]`);
-      if(btn) btn.classList.add("active");
-      day.ink.forEach(it=>it.selected=false);
-      updateSelectBar();
-      redrawInk();
-    }
-
-    canvas.style.touchAction = ["pen","eraser","line","mdf18","dimension","rect","polyline","select"].includes(name) ? "none" : "pan-y";
-  }
-
-  document.querySelectorAll(".tool-btn[data-tool]").forEach(btn=>{
-    btn.addEventListener("click", ()=>selectTool(btn.dataset.tool));
-  });
-
-  cadDrawBtn.addEventListener("click",(e)=>{
-    e.stopPropagation();
-    cadDrawPop.classList.toggle("open");
-    if(cadDrawPop.classList.contains("open")){
-      const r = cadDrawBtn.getBoundingClientRect();
-      cadDrawPop.style.left = Math.max(6, Math.min(r.left, window.innerWidth-220))+"px";
-      cadDrawPop.style.top = (r.bottom+6)+"px";
-    }
-  });
-
-  cadDrawPop.querySelectorAll("[data-cadtool]").forEach(btn=>{
-    btn.addEventListener("click",()=>{
-      selectTool(btn.dataset.cadtool);
-      cadDrawPop.classList.remove("open");
-    });
-  });
-
-  function wireColorPopover(btnId, popId, onPick){
-    const btn = document.getElementById(btnId);
-    const pop = document.getElementById(popId);
-    btn.addEventListener("click",(e)=>{
-      e.stopPropagation();
-      pop.classList.toggle("open");
-      if(pop.classList.contains("open")){
-        const r = btn.getBoundingClientRect();
-        pop.style.left = Math.max(6, Math.min(r.left - 50, window.innerWidth-150))+"px";
-        pop.style.top = (r.bottom+6)+"px";
-      }
-    });
-    pop.addEventListener("click",(e)=>{
-      const sw = e.target.closest(".swatch"); if(!sw) return;
-      pop.querySelectorAll(".swatch").forEach(s=>s.classList.remove("active"));
-      sw.classList.add("active");
-      btn.style.background = sw.dataset.color;
-      onPick(sw.dataset.color);
-      pop.classList.remove("open");
-    });
-  }
-  wireColorPopover("penColorBtn","penColorPop",(c)=>{ penColor = c; });
-  wireColorPopover("noteColorBtn","noteColorPop",(c)=>{ noteColor = c; });
-
-  document.addEventListener("click",(e)=>{
-    if(!e.target.closest("#cadDrawPopover") && !e.target.closest("#cadDrawBtn")) cadDrawPop.classList.remove("open");
-    if(!e.target.closest("#snapMenuPanel") && !e.target.closest("#snapMenuBtn")) snapMenuPanel.classList.remove("open");
-    if(!e.target.closest("#viewSettingsPopover") && !e.target.closest("#viewSettingsBtn")) viewSettingsPopover.classList.remove("open");
-    if(!e.target.closest(".color-btn-wrap")) document.querySelectorAll(".color-popover.open").forEach(p=>p.classList.remove("open"));
-  });
-
-  document.getElementById("clearDayBtn").addEventListener("click", ()=>{
-    if(confirm("Bu günün tüm notlarını ve çizimlerini silmek istediğine emin misin?")){
-      pushUndoSnapshot();
-      day = {ink:[], texts:[], notes:[], images:[]};
-      renderAll();
-      saveDayNow();
-      renderCalendar();
-    }
-  });
-
-  const PAGE_RATIO = 1.41421356;
-  const PAGE_GAP = 18;
-  function pageHeightPx(){ return wrap.clientWidth * PAGE_RATIO; }
-
-  function applyPages(n){
-    day.pageCount = Math.max(1, n);
-    const ph = pageHeightPx();
-    contentHeight = day.pageCount*ph + (day.pageCount-1)*PAGE_GAP;
-    canvasInner.style.height = contentHeight+"px";
-    resizeCanvas();
-    renderPageDividers();
-    updatePageLabel();
-  }
-  function renderPageDividers(){
-    canvasInner.querySelectorAll(".page-divider").forEach(el=>el.remove());
-    const ph = pageHeightPx();
-    for(let i=1;i<day.pageCount;i++){
-      const y = i*ph + (i-1)*PAGE_GAP + PAGE_GAP/2;
-      const div = document.createElement("div");
-      div.className = "page-divider";
-      div.style.top = (y-1)+"px";
-      div.innerHTML = "<span>Sayfa "+(i+1)+"</span>";
-      canvasInner.appendChild(div);
-    }
-  }
-  function resizeCanvas(){
-    const w = wrap.clientWidth;
-    const ratio = window.devicePixelRatio || 1;
-    canvas.width = w*ratio;
-    canvas.height = contentHeight*ratio;
-    canvas.style.width = w+"px";
-    canvas.style.height = contentHeight+"px";
-    ctx.setTransform(ratio,0,0,ratio,0,0);
-    redrawInk();
-  }
-  window.addEventListener("resize", ()=>applyPages(day.pageCount||1));
-
-  function currentPageIndex(){
-    const ph = pageHeightPx();
-    return Math.min(day.pageCount-1, Math.round(wrap.scrollTop/(ph+PAGE_GAP)));
-  }
-  function scrollToPage(n){
-    const ph = pageHeightPx();
-    wrap.scrollTo({top: n*(ph+PAGE_GAP), behavior:"smooth"});
-  }
-  function updatePageLabel(){
-    document.getElementById("pageLabel").textContent = (currentPageIndex()+1)+"/"+day.pageCount;
-  }
-  document.getElementById("pagePrev").addEventListener("click", ()=>scrollToPage(Math.max(0, currentPageIndex()-1)));
-  document.getElementById("pageNext").addEventListener("click", ()=>{
-    const idx = currentPageIndex();
-    if(idx+1 >= day.pageCount){ applyPages(day.pageCount+1); saveDaySoon(); }
-    scrollToPage(idx+1);
-  });
-
-  let pageAddLock = false;
-  wrap.addEventListener("scroll", ()=>{
-    if(!pageAddLock && wrap.scrollTop + wrap.clientHeight > contentHeight - 200){
-      pageAddLock = true;
-      applyPages(day.pageCount+1);
-      saveDaySoon();
-      setTimeout(()=>{ pageAddLock = false; }, 400);
-    }
-    updatePageLabel();
-  });
-
-  // === AutoCAD TARZI SNAP VE ORTHO SİSTEMİ ===
-  function findSnapPoint(pt, currentStart){
-    const tol = 24;
-    let best=null, bestD=tol, type=null;
-    activeTrackingLines = [];
-
-    // Tüm çizgileri kontrol et
-    day.ink.forEach(item=>{
-      if(item.type!=="path" || !item.pts || item.pts.length < 2) return;
-      const pts = item.pts;
-      
-      // Uç Nokta Snap
-      if(snapSettings.endpoint){
-        // İlk nokta
-        const d1 = Math.hypot(pts[0][0]-pt[0], pts[0][1]-pt[1]);
-        if(d1<bestD){ bestD=d1; best=pts[0]; type="endpoint"; }
-        // Son nokta
-        const last = pts[pts.length-1];
-        const d2 = Math.hypot(last[0]-pt[0], last[1]-pt[1]);
-        if(d2<bestD){ bestD=d2; best=last; type="endpoint"; }
-      }
-      
-      // Orta Nokta Snap
-      if(snapSettings.midpoint && pts.length>=2){
-        for(let i=0;i<pts.length-1;i++){
-          const mid = [(pts[i][0]+pts[i+1][0])/2, (pts[i][1]+pts[i+1][1])/2];
-          const d = Math.hypot(mid[0]-pt[0], mid[1]-pt[1]);
-          if(d<bestD){ bestD=d; best=mid; type="midpoint"; }
-        }
-      }
-    });
-
-    // Polyline noktalarına snap
-    if(polyPts && polyPts.length > 0){
-      polyPts.forEach(p=>{
-        const d = Math.hypot(p[0]-pt[0], p[1]-pt[1]);
-        if(d<bestD){ bestD=d; best=p; type="endpoint"; }
-      });
-    }
-
-    if(best) return {pt: best, type};
-
-    // Tracking 90° (AutoCAD tarzı hizalama)
-    if(snapSettings.tracking){
-      let trackedPt = null;
-
-      day.ink.forEach(item=>{
-        if(trackedPt || item.type!=="path" || !item.pts) return;
-        item.pts.forEach(p=>{
-          // Yatay hizalama
-          if(Math.abs(pt[1] - p[1]) < 20){
-            if(!trackedPt){
-              trackedPt = [pt[0], p[1]];
-            } else {
-              trackedPt[1] = p[1];
-            }
-            activeTrackingLines.push({ from: p, to: trackedPt });
-          }
-          // Dikey hizalama
-          if(Math.abs(pt[0] - p[0]) < 20){
-            if(!trackedPt){
-              trackedPt = [p[0], pt[1]];
-            } else {
-              trackedPt[0] = p[0];
-            }
-            activeTrackingLines.push({ from: p, to: trackedPt });
-          }
-        });
-      });
-
-      if(trackedPt) return {pt: trackedPt, type: "tracking90"};
-    }
-
-    return null;
-  }
-
-  function snapPoint(pt, currentStart){
-    const s = findSnapPoint(pt, currentStart);
-    if(s){ activeSnapMarker = s; return [s.pt[0], s.pt[1]]; }
-    activeSnapMarker = null;
-    return pt;
-  }
-
-  function applyOrthoStrict(start, end){
-    const dx = end[0] - start[0];
-    const dy = end[1] - start[1];
-    if(Math.abs(dx) > Math.abs(dy)){
-      return [end[0], start[1]];
-    } else {
-      return [start[0], end[1]];
-    }
-  }
-
-  function applyOrtho(start, end){
-    if(!orthoEnabled) return end;
-    return applyOrthoStrict(start, end);
-  }
-
-  function rectPts(a,b){ return [[a[0],a[1]],[b[0],a[1]],[b[0],b[1]],[a[0],b[1]],[a[0],a[1]]]; }
-
-  function mdfPts(start, end, rawPt){
-    const dx = end[0] - start[0], dy = end[1] - start[1];
-    const len = Math.hypot(dx, dy);
-    if(len < 1) return rectPts(start, end);
-    const mdfThickness = 18;
-    
-    let nx = -dy / len;
-    let ny = dx / len;
-
-    if(rawPt){
-      const v1x = end[0] - start[0], v1y = end[1] - start[1];
-      const v2x = rawPt[0] - start[0], v2y = rawPt[1] - start[1];
-      const crossProduct = v1x * v2y - v1y * v2x;
-      if(crossProduct < 0){
-        nx = -nx;
-        ny = -ny;
-      }
-    }
-
-    const p1 = [start[0], start[1]];
-    const p2 = [end[0], end[1]];
-    const p3 = [end[0] + nx * mdfThickness, end[1] + ny * mdfThickness];
-    const p4 = [start[0] + nx * mdfThickness, start[1] + ny * mdfThickness];
-    return [p1, p2, p3, p4, p1];
-  }
-
-  function redrawInk(){
-    ctx.clearRect(0,0,wrap.clientWidth,contentHeight);
-    day.ink.forEach(item=>{
-      if(item.type==="path") drawPath(item);
-    });
-    if(previewItem){
-      ctx.save();
-      ctx.setLineDash([5,4]);
-      drawPath(previewItem);
-      ctx.restore();
-    }
-    drawTrackingGuides();
-    drawSnapMarker();
-  }
-
-  function drawPath(p){
-    if(!p.pts || p.pts.length<1) return;
-
-    if(p.isDimension){
-      drawAutoCadDimension(p);
-      return;
-    }
-
-    const isSelected = p.selected;
-    ctx.strokeStyle = isSelected ? "#E8A33D" : (p.color || "#1B2430");
-    ctx.fillStyle = p.isMdf ? "rgba(232, 163, 61, 0.18)" : ctx.strokeStyle;
-    ctx.lineWidth = isSelected ? (p.width || 2.5) + 3 : (p.width || 2.5);
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-
-    if(p.pts.length===1){
-      ctx.beginPath();
-      ctx.arc(p.pts[0][0], p.pts[0][1], (ctx.lineWidth/2)+0.5, 0, Math.PI*2);
-      ctx.fill();
-      return;
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(p.pts[0][0], p.pts[0][1]);
-    for(let i=1;i<p.pts.length;i++) ctx.lineTo(p.pts[i][0], p.pts[i][1]);
-    
-    if(p.isMdf){
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.stroke();
-
-    // Seçili çizgiye vurgu işareti
-    if(isSelected){
-      ctx.save();
-      ctx.strokeStyle = "#00FF66";
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 4]);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    if(p.isCadLine && p.pts.length>=2){
-      for(let i=0;i<p.pts.length-1;i++){
-        if(p.isMdf && i > 0) break;
-        const p1 = p.pts[i], p2 = p.pts[i+1];
-        const len = Math.round(Math.hypot(p2[0]-p1[0], p2[1]-p1[1]));
-        if(len > 3) drawDimensionLabelWithPointer(p1, p2, len);
-      }
-    }
-  }
-
-  // roundRect polyfill
-  if (!CanvasRenderingContext2D.prototype.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
-      const r = typeof radii === 'number' ? radii : (radii || 0);
-      this.moveTo(x + r, y);
-      this.lineTo(x + w - r, y);
-      this.quadraticCurveTo(x + w, y, x + w, y + r);
-      this.lineTo(x + w, y + h - r);
-      this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      this.lineTo(x + r, y + h);
-      this.quadraticCurveTo(x, y + h, x, y + h - r);
-      this.lineTo(x, y + r);
-      this.quadraticCurveTo(x, y, x + r, y);
-      return this;
-    };
-  }
-
-  function drawAutoCadDimension(dim){
-    const p1 = dim.pts[0], p2 = dim.pts[1];
-    const len = Math.round(Math.hypot(p2[0]-p1[0], p2[1]-p1[1]));
-    if(len < 1) return;
-
-    const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
-    let nx = -Math.sin(ang), ny = Math.cos(ang);
-
-    let offsetDist = dim.offsetDist || 32;
-
-    const dimP1 = [p1[0] + nx * offsetDist, p1[1] + ny * offsetDist];
-    const dimP2 = [p2[0] + nx * offsetDist, p2[1] + ny * offsetDist];
-    const mx = (dimP1[0]+dimP2[0])/2, my = (dimP1[1]+dimP2[1])/2;
-
-    ctx.save();
-    ctx.strokeStyle = dim.selected ? "#E8A33D" : "#2B4C7E";
-    ctx.fillStyle = dim.selected ? "#E8A33D" : "#2B4C7E";
-    ctx.lineWidth = 1.5;
-
-    ctx.beginPath();
-    ctx.moveTo(dimP1[0], dimP1[1]);
-    ctx.lineTo(dimP2[0], dimP2[1]);
-    ctx.stroke();
-
-    const extOver = offsetDist > 0 ? 6 : -6;
-    ctx.beginPath();
-    ctx.moveTo(p1[0], p1[1]);
-    ctx.lineTo(dimP1[0] + nx*extOver, dimP1[1] + ny*extOver);
-    ctx.moveTo(p2[0], p2[1]);
-    ctx.lineTo(dimP2[0] + nx*extOver, dimP2[1] + ny*extOver);
-    ctx.stroke();
-
-    ctx.font = "700 12px Inter, sans-serif";
-    const text = len + " px";
-    const tw = ctx.measureText(text).width;
-
-    ctx.save();
-    ctx.translate(mx, my);
-    let textAng = ang;
-    if (textAng > Math.PI/2 || textAng < -Math.PI/2) textAng += Math.PI;
-    ctx.rotate(textAng);
-
-    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--paper').trim() || "#F7F5EF";
-    ctx.fillRect(-tw/2 - 4, -18, tw + 8, 14);
-
-    ctx.fillStyle = "#B23A48";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, 0, -11);
-    ctx.restore();
-
-    ctx.restore();
-  }
-
-  function drawDimensionLabelWithPointer(p1, p2, lenText){
-    const mx = (p1[0]+p2[0])/2, my = (p1[1]+p2[1])/2;
-    const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
-    const nx = -Math.sin(ang), ny = Math.cos(ang);
-    const offsetDist = 28;
-    
-    const labelX = mx + nx * offsetDist;
-    const labelY = my + ny * offsetDist;
-
-    ctx.save();
-    ctx.strokeStyle = "#E8A33D";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(mx, my);
-    ctx.lineTo(labelX, labelY);
-    ctx.stroke();
-
-    ctx.fillStyle = "#E8A33D";
-    ctx.beginPath();
-    ctx.arc(mx, my, 3, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.font = "700 11px Inter, sans-serif";
-    const tw = ctx.measureText(lenText + "px").width;
-    const bw = tw + 14, bh = 20;
-
-    ctx.fillStyle = "rgba(27,36,48,0.95)";
-    ctx.strokeStyle = "#E8A33D";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(labelX - bw/2, labelY - bh/2, bw, bh, 6);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#00FF66";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(lenText + "px", labelX, labelY);
-    ctx.restore();
-  }
-
-  function drawTrackingGuides(){
-    if(!activeTrackingLines || activeTrackingLines.length===0) return;
-    ctx.save();
-    ctx.strokeStyle = "#00FF66";
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6, 4]);
-
-    activeTrackingLines.forEach(line=>{
-      ctx.beginPath();
-      ctx.moveTo(line.from[0], line.from[1]);
-      ctx.lineTo(line.to[0], line.to[1]);
-      ctx.stroke();
-    });
-
-    ctx.restore();
-  }
-
-  function drawSnapMarker(){
-    if(!activeSnapMarker) return;
-    const [x,y] = activeSnapMarker.pt;
-    ctx.save();
-    ctx.strokeStyle = "#00FF66";
-    ctx.fillStyle = "rgba(0, 255, 102, 0.25)";
-    ctx.lineWidth = 2.5;
-
-    if(activeSnapMarker.type==="tracking90"){
-      ctx.fillRect(x-8, y-8, 16, 16);
-      ctx.strokeRect(x-8, y-8, 16, 16);
-      ctx.fillStyle = "#00FF66";
-      ctx.font = "700 10px Inter, sans-serif";
-      ctx.fillText("HİZA (90°)", x+12, y-10);
-    } else if(activeSnapMarker.type==="midpoint"){
-      ctx.beginPath();
-      ctx.moveTo(x, y-9); ctx.lineTo(x-9, y+7); ctx.lineTo(x+9, y+7); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    } else {
-      // Endpoint - kare
-      ctx.fillRect(x-6, y-6, 12, 12);
-      ctx.strokeRect(x-6, y-6, 12, 12);
-      // Çapraz çizgi
-      ctx.strokeStyle = "#00FF66";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x-4, y-4);
-      ctx.lineTo(x+4, y+4);
-      ctx.moveTo(x+4, y-4);
-      ctx.lineTo(x-4, y+4);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  let drawing = false;
-  let currentPath = null;
-
-  function ptFromEvent(e){
-    const rect = canvas.getBoundingClientRect();
-    return [e.clientX-rect.left, e.clientY-rect.top];
-  }
-
-  function pointInPolygon(point, vs) {
-    const x = point[0], y = point[1];
-    let inside = false;
-    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-      const xi = vs[i][0], yi = vs[i][1];
-      const xj = vs[j][0], yj = vs[j][1];
-      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-      if (intersect) inside = !inside;
-    }
-    return inside;
-  }
-
-  function eraseAtPoint(pt){
-    const r = 16; 
-    let changed = false;
-    let newInkList = [];
-
-    day.ink.forEach(item => {
-      if(item.type !== "path" || !item.pts || item.pts.length === 0){
-        newInkList.push(item);
-        return;
-      }
-
-      if(item.isMdf){
-        let hit = pointInPolygon(pt, item.pts);
-        if(!hit){
-          for(let i=0;i<item.pts.length-1;i++){
-            if(distToSegment(pt, item.pts[i], item.pts[i+1]) < r){
-              hit = true; break;
-            }
-          }
-        }
-        if(hit){
-          changed = true;
-          return;
-        } else {
-          newInkList.push(item);
-          return;
-        }
-      }
-
-      let currentSegment = [];
-      item.pts.forEach(p => {
-        const d = Math.hypot(p[0]-pt[0], p[1]-pt[1]);
-        if(d > r){
-          currentSegment.push(p);
-        } else {
-          changed = true;
-          if(currentSegment.length > 1){
-            newInkList.push(Object.assign({}, item, {id:uid(), pts: currentSegment}));
-          }
-          currentSegment = [];
-        }
-      });
-      if(currentSegment.length > 1){
-        newInkList.push(Object.assign({}, item, {id:uid(), pts: currentSegment}));
-      }
-    });
-
-    if(changed){
-      day.ink = newInkList;
-      redrawInk();
-      saveDaySoon();
-    }
-  }
-
-  canvas.addEventListener("pointerdown",(e)=>{
-    if(!["pen","eraser","line","mdf18","dimension","rect","polyline"].includes(tool)) return;
-    canvas.setPointerCapture(e.pointerId);
-    const pt = ptFromEvent(e);
-
-    if(tool==="pen"){
-      pushUndoSnapshot();
-      drawing = true;
-      currentPath = {id:uid(), type:"path", color:penColor, width: e.pointerType==="pen"?2.5:3, pts:[pt]};
-      day.ink.push(currentPath);
-    } else if(tool==="eraser"){
-      pushUndoSnapshot();
-      drawing = true;
-      eraseAtPoint(pt);
-    } else if(tool==="line"){
-      pushUndoSnapshot();
-      drawing = true;
-      lineStart = snapPoint(pt, null);
-      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:[lineStart, lineStart]};
-      redrawInk();
-    } else if(tool==="mdf18"){
-      pushUndoSnapshot();
-      drawing = true;
-      lineStart = snapPoint(pt, null);
-      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, isMdf:true, pts:mdfPts(lineStart, lineStart, pt)};
-      redrawInk();
-    } else if(tool==="dimension"){
-      pushUndoSnapshot();
-      drawing = true;
-      lineStart = snapPoint(pt, null);
-      previewItem = {id:uid(), type:"path", color:"#2B4C7E", isDimension:true, offsetDist:32, pts:[lineStart, lineStart]};
-      redrawInk();
-    } else if(tool==="rect"){
-      pushUndoSnapshot();
-      drawing = true;
-      lineStart = snapPoint(pt, null);
-      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:rectPts(lineStart, lineStart)};
-      redrawInk();
-    } else if(tool==="polyline"){
-      if(!polyPts) pushUndoSnapshot();
-      const startPt = polyPts && polyPts.length>0 ? polyPts[polyPts.length-1] : null;
-      const p = snapPoint(pt, startPt);
-      if(!polyPts){
-        polyPts = [p];
-        document.getElementById("polyBar").classList.add("show");
-      } else {
-        polyPts.push(p);
-      }
-      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:polyPts.slice()};
-      redrawInk();
-    }
-  });
-
-  canvas.addEventListener("pointermove",(e)=>{
-    const pt = ptFromEvent(e);
-
-    if(!drawing && ["line","mdf18","dimension","polyline","rect"].includes(tool)){
-      const startPt = (tool==="polyline" && polyPts && polyPts.length>0) ? polyPts[polyPts.length-1] : null;
-      snapPoint(pt, startPt);
-      redrawInk();
-      return;
-    }
-
-    if(tool==="polyline" && polyPts){
-      const lastPt = polyPts[polyPts.length-1];
-      let end = snapPoint(pt, lastPt);
-      if(!activeSnapMarker && polyPts.length>0) end = applyOrtho(lastPt, end);
-      const tempPts = polyPts.concat([end]);
-      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:tempPts};
-      redrawInk();
-      return;
-    }
-
-    if(!drawing) return;
-
-    if(tool==="pen" && currentPath){
-      currentPath.pts.push(pt);
-      redrawInk();
-    } else if(tool==="eraser"){
-      eraseAtPoint(pt);
-    } else if(tool==="line"){
-      let end = snapPoint(pt, lineStart);
-      if(!activeSnapMarker) end = applyOrtho(lineStart, end);
-      previewItem.pts = [lineStart, end];
-      redrawInk();
-    } else if(tool==="mdf18"){
-      let end = snapPoint(pt, lineStart);
-      if(!activeSnapMarker) end = applyOrthoStrict(lineStart, end);
-      previewItem.pts = mdfPts(lineStart, end, pt);
-      redrawInk();
-    } else if(tool==="dimension"){
-      let end = snapPoint(pt, lineStart);
-      if(!activeSnapMarker) end = applyOrtho(lineStart, end);
-      
-      const dx = end[0] - lineStart[0], dy = end[1] - lineStart[1];
-      const len = Math.hypot(dx, dy);
-      if(len > 1){
-        const nx = -dy / len, ny = dx / len;
-        const v2x = pt[0] - lineStart[0], v2y = pt[1] - lineStart[1];
-        const proj = v2x * nx + v2y * ny;
-        previewItem.offsetDist = Math.abs(proj) > 12 ? proj : (proj >= 0 ? 32 : -32);
-      }
-      
-      previewItem.pts = [lineStart, end];
-      redrawInk();
-    } else if(tool==="rect"){
-      const end = snapPoint(pt, lineStart);
-      previewItem.pts = rectPts(lineStart, end);
-      redrawInk();
-    }
-  });
-
-  function endStroke(){
-    if(!drawing) return;
-    drawing=false;
-    if((tool==="line" || tool==="mdf18" || tool==="dimension" || tool==="rect") && previewItem){
-      const pts = previewItem.pts;
-      let maxLen = 0;
-      for(let i=0;i<pts.length-1;i++){
-        maxLen = Math.max(maxLen, Math.hypot(pts[i+1][0]-pts[i][0], pts[i+1][1]-pts[i][1]));
-      }
-      if(maxLen > 3) day.ink.push(previewItem);
-      else if(undoStack.length) undoStack.pop();
-      previewItem = null;
-    }
-    currentPath=null; activeSnapMarker=null; activeTrackingLines=[];
-    updateUndoBtn();
-    saveDaySoon(); redrawInk();
-  }
-  canvas.addEventListener("pointerup", endStroke);
-  canvas.addEventListener("pointercancel", endStroke);
-
-  document.getElementById("polyDone").addEventListener("click", ()=>{
-    if(polyPts && polyPts.length>=2){
-      day.ink.push({id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:polyPts});
-      saveDaySoon();
-    }
-    polyPts=null; previewItem=null; activeTrackingLines=[]; redrawInk();
-    document.getElementById("polyBar").classList.remove("show");
-  });
-  document.getElementById("polyCancel").addEventListener("click", ()=>{
-    polyPts=null; previewItem=null; activeTrackingLines=[]; redrawInk();
-    document.getElementById("polyBar").classList.remove("show");
-  });
-
-  document.getElementById("undoBtn").addEventListener("click", ()=>{
-    if(!undoStack.length) return;
-    const prev = undoStack.pop();
-    try{ day.ink = JSON.parse(prev); }catch(e){ }
-    day.ink.forEach(it=>{ if(!it.id) it.id = uid(); });
-    updateUndoBtn();
-    redrawInk();
-    saveDaySoon();
-  });
-
-  function distToSegment(p, a, b){
-    const l2 = (b[0]-a[0])**2 + (b[1]-a[1])**2;
-    if(l2 === 0) return Math.hypot(p[0]-a[0], p[1]-a[1]);
-    let t = ((p[0]-a[0])*(b[0]-a[0]) + (p[1]-a[1])*(b[1]-a[1])) / l2;
-    t = Math.max(0, Math.min(1, t));
-    return Math.hypot(p[0] - (a[0]+t*(b[0]-a[0])), p[1] - (a[1]+t*(b[1]-a[1])));
-  }
-
-  canvas.addEventListener("click",(e)=>{
-    const pt = ptFromEvent(e);
-
-    if(tool==="select"){
-      let found = false;
-      // Çizgileri ters sırada kontrol et (üstteki önce seçilsin)
-      for(let i=day.ink.length-1; i>=0; i--){
-        const item = day.ink[i];
-        if(item.type!=="path" || !item.pts) continue;
-        for(let j=0;j<item.pts.length-1;j++){
-          if(distToSegment(pt, item.pts[j], item.pts[j+1]) < 14){
-            item.selected = !item.selected;
-            found = true;
-            break;
-          }
-        }
-        if(found) break;
-      }
-      if(found){ updateSelectBar(); redrawInk(); return; }
-    }
-
-    if(!["select","line","mdf18","rect","polyline"].includes(tool)) return;
-
-    let hitFound = false;
-    day.ink.forEach(item=>{
-      if(hitFound || !item.isCadLine || item.pts.length<2) return;
-      
-      const checkLimit = item.isMdf ? 1 : item.pts.length - 1;
-
-      for(let i=0; i<checkLimit; i++){
-        const p1=item.pts[i], p2=item.pts[i+1];
-        const mx=(p1[0]+p2[0])/2, my=(p1[1]+p2[1])/2;
-        const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
-        const nx = -Math.sin(ang), ny = Math.cos(ang);
-        const lx = mx + nx * 28, ly = my + ny * 28;
-
-        if(Math.hypot(pt[0]-lx, pt[1]-ly) < 32 || Math.hypot(pt[0]-mx, pt[1]-my) < 20){
-          hitFound = true;
-          activeEditLine = {item, p1Index:i, p2Index:i+1};
-          dimValueInput.value = Math.round(Math.hypot(p2[0]-p1[0], p2[1]-p1[1]));
-          dimEditor.style.left = Math.min(window.innerWidth-160, Math.max(10, e.clientX-60))+"px";
-          dimEditor.style.top = Math.min(window.innerHeight-80, Math.max(10, e.clientY-40))+"px";
-          dimEditor.classList.add("show");
-          setTimeout(()=>dimValueInput.focus(), 50);
-          break;
-        }
-      }
-    });
-  });
-
-  document.getElementById("dimApplyBtn").addEventListener("click",()=>{
-    if(activeEditLine && activeEditLine.item && activeEditLine.item.pts){
-      const newLen = parseFloat(dimValueInput.value);
-      if(!isNaN(newLen) && newLen>0){
-        pushUndoSnapshot();
-        const item = activeEditLine.item;
-        const pts = item.pts;
-        const p1 = pts[activeEditLine.p1Index];
-        const p2 = pts[activeEditLine.p2Index];
-        const currentLen = Math.hypot(p2[0]-p1[0], p2[1]-p1[1]);
-        if(currentLen > 0){
-          const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
-          const cx = (p1[0]+p2[0])/2, cy = (p1[1]+p2[1])/2;
-          const newP1 = [cx - (Math.cos(ang) * newLen / 2), cy - (Math.sin(ang) * newLen / 2)];
-          const newP2 = [cx + (Math.cos(ang) * newLen / 2), cy + (Math.sin(ang) * newLen / 2)];
-
-          if(item.isMdf){
-            item.pts = mdfPts(newP1, newP2, null);
-          } else {
-            p1[0] = newP1[0]; p1[1] = newP1[1];
-            p2[0] = newP2[0]; p2[1] = newP2[1];
-          }
-          redrawInk();
-          saveDaySoon();
-        } else {
-          undoStack.pop();
-        }
-      }
-    }
-    dimEditor.classList.remove("show");
-    activeEditLine = null;
-  });
-
-  function updateSelectBar(){
-    const anySelected = day.ink.some(it=>it.selected);
-    document.getElementById("selectBar").classList.toggle("show", anySelected && tool==="select");
-  }
-
-  document.getElementById("btnCopySelected").addEventListener("click", ()=>{
-    pushUndoSnapshot();
-    const copies = [];
-    day.ink.forEach(it=>{
-      if(it.selected && it.pts){
-        const copiedPts = it.pts.map(p => [p[0] + 30, p[1] + 30]);
-        copies.push(Object.assign({}, it, { id: uid(), pts: copiedPts, selected: true }));
-        it.selected = false;
-      }
-    });
-    day.ink = day.ink.concat(copies);
-    updateSelectBar();
-    redrawInk();
-    saveDaySoon();
-    showToast(copies.length + " Çizgi Kopyalandı");
-  });
-
-  document.getElementById("btnDeleteSelected").addEventListener("click", ()=>{
-    pushUndoSnapshot();
-    day.ink = day.ink.filter(it=>!it.selected);
-    updateSelectBar(); redrawInk(); saveDaySoon();
-  });
-  document.getElementById("btnDeselectAll").addEventListener("click", ()=>{
-    day.ink.forEach(it=>it.selected=false);
-    updateSelectBar(); redrawInk();
-  });
-
-  wrap.addEventListener("click",(e)=>{
-    if(e.target !== canvas && e.target !== canvasInner) return;
-    if(tool==="note"){
-      const rect = canvasInner.getBoundingClientRect();
-      addNote({x:e.clientX-rect.left-70, y:e.clientY-rect.top-30, w:180, h:130, text:"", color:noteColor, locked:false});
-      saveDaySoon();
-    }
-  });
-
-  function addNote(data){
-    const item = Object.assign({id:uid()}, data);
-    day.notes.push(item);
-    renderBox(item,"note");
-    return item;
-  }
-
-  const NOTE_PALETTE = ["#FFD966","#A8D8B9","#A9CCE3","#F2B5A0","#C9B6E4","#FFFFFF"];
-
-  function renderBox(item, kind){
-    const box = document.createElement("div");
-    box.className = "box " + (kind==="text" ? "text-box" : "note-box");
-    if(item.locked) box.classList.add("locked");
-    box.style.left = item.x+"px"; box.style.top = item.y+"px";
-    box.style.width = item.w+"px"; box.style.height = item.h+"px";
-    if(kind==="note") box.style.background = item.color;
-
-    const head = document.createElement("div");
-    head.className = "box-head";
-    const dots = document.createElement("div");
-    dots.className = "drag-dots"; dots.textContent = "⣿ TAŞI";
-    const btns = document.createElement("div");
-    btns.className = "box-btns";
-
-    const confirmBtn = document.createElement("div");
-    confirmBtn.className = "box-confirm-btn" + (item.locked ? " confirmed" : "");
-    confirmBtn.textContent = "✓";
-    confirmBtn.title = item.locked ? "Düzenle" : "Metni Onayla";
-    
-    confirmBtn.addEventListener("click", (e)=>{
-      e.stopPropagation();
-      item.locked = !item.locked;
-      box.classList.toggle("locked", item.locked);
-      textarea.readOnly = item.locked;
-      confirmBtn.classList.toggle("confirmed", item.locked);
-      if(item.locked) textarea.blur();
-      else textarea.focus();
-      saveDaySoon();
-    });
-    btns.appendChild(confirmBtn);
-
-    if(kind==="note"){
-      const cdot = document.createElement("div");
-      cdot.className = "color-dot"; cdot.style.background = item.color;
-      cdot.addEventListener("click",(e)=>{
-        e.stopPropagation();
-        let idx = NOTE_PALETTE.indexOf(item.color);
-        item.color = NOTE_PALETTE[(idx+1)%NOTE_PALETTE.length];
-        box.style.background = item.color; cdot.style.background = item.color;
-        saveDaySoon();
-      });
-      btns.appendChild(cdot);
-    }
-    const xBtn = document.createElement("div");
-    xBtn.className = "box-x"; xBtn.textContent = "×";
-    xBtn.addEventListener("click",(e)=>{
-      e.stopPropagation();
-      const arr = kind==="text" ? day.texts : day.notes;
-      const idx = arr.findIndex(it=>it.id===item.id);
-      if(idx>-1) arr.splice(idx,1);
-      box.remove(); saveDaySoon();
-    });
-    btns.appendChild(xBtn); head.appendChild(dots); head.appendChild(btns);
-
-    const textarea = document.createElement("textarea");
-    textarea.className = "box-body";
-    textarea.value = item.text || "";
-    textarea.placeholder = "Not yazın veya sesle söyleyin...";
-    textarea.readOnly = item.locked;
-
-    textarea.addEventListener("input", ()=>{ item.text = textarea.value; saveDaySoon(); });
-    textarea.addEventListener("pointerdown", (e)=> e.stopPropagation());
-    textarea.addEventListener("touchstart", (e)=> e.stopPropagation());
-
-    const resize = document.createElement("div");
-    resize.className = "resize-handle";
-    resize.innerHTML = '<svg viewBox="0 0 16 16"><path d="M14 2 2 14M14 8 8 14M14 14 14 14" stroke="#1B2430" stroke-width="1.5"/></svg>';
-
-    box.appendChild(head); box.appendChild(textarea); box.appendChild(resize);
-    overlay.appendChild(box);
-
-    let dragging=false, dragOX=0, dragOY=0;
-    head.addEventListener("pointerdown",(e)=>{
-      dragging=true; head.setPointerCapture(e.pointerId);
-      const r = box.getBoundingClientRect();
-      dragOX = e.clientX-r.left; dragOY = e.clientY-r.top;
-    });
-    head.addEventListener("pointermove",(e)=>{
-      if(!dragging) return;
-      const innerRect = canvasInner.getBoundingClientRect();
-      let nx = e.clientX - innerRect.left - dragOX;
-      let ny = e.clientY - innerRect.top - dragOY;
-      box.style.left = nx+"px"; box.style.top = ny+"px";
-      item.x = nx; item.y = ny;
-    });
-    head.addEventListener("pointerup",()=>{ if(dragging){dragging=false; saveDaySoon();} });
-
-    let resizing=false, startW=0, startH=0, startX=0, startY=0;
-    resize.addEventListener("pointerdown",(e)=>{
-      e.stopPropagation(); resizing=true; resize.setPointerCapture(e.pointerId);
-      startW = box.offsetWidth; startH = box.offsetHeight;
-      startX = e.clientX; startY = e.clientY;
-    });
-    resize.addEventListener("pointermove",(e)=>{
-      if(!resizing) return;
-      item.w = Math.max(120, startW + (e.clientX-startX));
-      item.h = Math.max(80, startH + (e.clientY-startY));
-      box.style.width = item.w+"px"; box.style.height = item.h+"px";
-    });
-    resize.addEventListener("pointerup",()=>{ if(resizing){resizing=false; saveDaySoon();} });
-  }
-
-  // --- RESİM YÜKLEME VE İŞLEME SİSTEMİ ---
-  document.getElementById("photoBtn").addEventListener("click", ()=>document.getElementById("photoInput").click());
-  document.getElementById("photoInput").addEventListener("change",(e)=>{
-    const files = Array.from(e.target.files||[]);
-    if(files.length === 0) return;
-    
-    files.forEach((f, idx)=>{
-      const reader = new FileReader();
-      reader.onload = (evt)=>{
-        const img = new Image();
-        img.onload = ()=>{
-          const maxDim = 800;
-          let w = img.width, h = img.height;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
-            else { w = Math.round((w * maxDim) / h); h = maxDim; }
-          }
-          const cvs = document.createElement('canvas');
-          cvs.width = w; cvs.height = h;
-          const c2d = cvs.getContext('2d');
-          c2d.drawImage(img, 0, 0, w, h);
-          const resizedDataUrl = cvs.toDataURL('image/jpeg', 0.8);
-
-          addImageBox({
-            id: uid(),
-            x: Math.max(10, wrap.clientWidth/2 - 100 + (idx*15)),
-            y: wrap.scrollTop + 50 + (idx*15),
-            w: 220,
-            h: 180,
-            dataUrl: resizedDataUrl
-          });
-        };
-        img.src = evt.target.result;
-      };
-      reader.readAsDataURL(f);
-    });
-    e.target.value = "";
-  });
-
-  function addImageBox(item){
-    day.images.push(item);
-    renderImageBox(item);
-    saveDaySoon();
-  }
-
-  function renderImageBox(item){
-    const box = document.createElement("div");
-    box.className = "box image-box";
-    box.style.left = item.x+"px"; box.style.top = item.y+"px";
-    box.style.width = item.w+"px"; box.style.height = item.h+"px";
-
-    const head = document.createElement("div");
-    head.className = "box-head";
-    const dots = document.createElement("div");
-    dots.className = "drag-dots"; dots.textContent = "⣿ TAŞI";
-    head.appendChild(dots);
-
-    const btns = document.createElement("div");
-    btns.className = "box-btns";
-
-    const xBtn = document.createElement("div");
-    xBtn.className = "box-x"; xBtn.textContent = "×";
-    xBtn.addEventListener("click",(e)=>{
-      e.stopPropagation();
-      const idx = day.images.findIndex(it=>it.id===item.id);
-      if(idx>-1) day.images.splice(idx,1);
-      box.remove(); saveDaySoon();
-    });
-
-    btns.appendChild(xBtn);
-    head.appendChild(btns);
-
-    const frame = document.createElement("div");
-    frame.className = "img-frame";
+  const delBtn = document.createElement("button"); delBtn.className="del"; delBtn.textContent="×"; delBtn.title="Sil";
+  delBtn.onclick=(ev)=>{ ev.stopPropagation(); page.boxes = page.boxes.filter(b=>b.id!==box.id); refreshPage(page.id); persist(); };
+  bar.appendChild(delBtn);
+  el.appendChild(bar);
+
+  if(box.type==="note"){
+    const ta = document.createElement("textarea");
+    ta.value = box.text||"";
+    ta.placeholder="Not yazın...";
+    ta.readOnly = !!box.locked;
+    ta.oninput = ()=>{ box.text = ta.value; persist(); };
+    el.appendChild(ta);
+  } else {
     const img = document.createElement("img");
-    img.src = item.dataUrl;
-    frame.appendChild(img);
-
-    const handle = document.createElement("div");
-    handle.className = "corner-handle se";
-
-    box.appendChild(head);
-    box.appendChild(frame);
-    box.appendChild(handle);
-    overlay.appendChild(box);
-
-    // Taşımak için Sürükleme
-    let dragging=false, dragOX=0, dragOY=0;
-    head.addEventListener("pointerdown",(e)=>{
-      dragging=true; head.setPointerCapture(e.pointerId);
-      const r = box.getBoundingClientRect();
-      dragOX = e.clientX-r.left; dragOY = e.clientY-r.top;
-    });
-    head.addEventListener("pointermove",(e)=>{
-      if(!dragging) return;
-      const innerRect = canvasInner.getBoundingClientRect();
-      let nx = e.clientX - innerRect.left - dragOX;
-      let ny = e.clientY - innerRect.top - dragOY;
-      box.style.left = nx+"px"; box.style.top = ny+"px";
-      item.x = nx; item.y = ny;
-    });
-    head.addEventListener("pointerup",()=>{ if(dragging){ dragging=false; saveDaySoon(); } });
-
-    // Yeniden Boyutlandırma
-    let resizing=false, startW=0, startH=0, startX=0, startY=0;
-    handle.addEventListener("pointerdown",(e)=>{
-      e.stopPropagation(); resizing=true; handle.setPointerCapture(e.pointerId);
-      startW = item.w; startH = item.h;
-      startX = e.clientX; startY = e.clientY;
-    });
-    handle.addEventListener("pointermove",(e)=>{
-      if(!resizing) return;
-      item.w = Math.max(100, startW + (e.clientX-startX));
-      item.h = Math.max(100, startH + (e.clientY-startY));
-      box.style.width = item.w+"px"; box.style.height = item.h+"px";
-    });
-    handle.addEventListener("pointerup",()=>{ if(resizing){ resizing=false; saveDaySoon(); } });
+    img.src = box.src;
+    el.appendChild(img);
   }
 
-  function exportAll(){
-    const rows = [["Tarih","Açıklama"]];
-    const dateKeys = Object.keys(localStorage).filter(k=>k.indexOf(STORAGE_PREFIX)===0).map(k=>k.slice(STORAGE_PREFIX.length)).sort();
-    dateKeys.forEach(dk=>{
-      const raw = localStorage.getItem(STORAGE_PREFIX+dk);
-      let parsed; try{ parsed = JSON.parse(raw); }catch(e){ parsed = null; }
-      if(!parsed) return;
-      const parts = [];
-      (parsed.texts||[]).forEach(t=>{ if(t.text && t.text.trim()) parts.push(t.text.trim()); });
-      (parsed.notes||[]).forEach(n=>{ if(n.text && n.text.trim()) parts.push(n.text.trim()); });
-      if(parts.length===0) return;
-      
-      const dParts = dk.split("-");
-      const dObj = new Date(parseInt(dParts[0]), parseInt(dParts[1])-1, parseInt(dParts[2]));
-      const formattedDateStr = formatCustomDate(dObj);
+  const handle = document.createElement("div"); handle.className="resizeHandle";
+  el.appendChild(handle);
 
-      rows.push([formattedDateStr, parts.join("\n---\n")]);
-    });
-    if(rows.length===1){ showToast("Aktarılacak metin yok"); return; }
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Notlar");
-    XLSX.writeFile(wb, `gunluk-notlarim-${formatCustomDate(current)}.xlsx`);
-    showToast("Excel Olarak Aktarıldı");
+  wireBoxDrag(el, bar, handle, page, box);
+  return el;
+}
+
+function wireBoxDrag(el, bar, handle, page, box){
+  let dragging=false, resizing=false, startX=0, startY=0, ox=0, oy=0, ow=0, oh=0;
+  const wrap = ()=> el.closest(".pageWrap");
+
+  function pageScale(){
+    const w = wrap();
+    const rect = w.getBoundingClientRect();
+    return { sx: CANVAS_W/rect.width, sy: CANVAS_H/rect.height };
   }
-  document.getElementById("exportBtn").addEventListener("click", exportAll);
 
-  function exportPdf(){
-    showToast("PDF Hazırlanıyor...");
-    const element = document.getElementById("canvasInner");
-    
-    html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: getComputedStyle(document.body).getPropertyValue('--paper').trim() || "#F7F5EF"
-    }).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
+  bar.addEventListener("pointerdown", (e)=>{
+    if(e.target.tagName==="BUTTON" || e.target.tagName==="INPUT") return;
+    dragging=true; bar.setPointerCapture(e.pointerId);
+    startX=e.clientX; startY=e.clientY; ox=box.x; oy=box.y;
+  });
+  bar.addEventListener("pointermove",(e)=>{
+    if(!dragging) return;
+    const sc = pageScale();
+    box.x = Math.max(0, ox + (e.clientX-startX)*sc.sx);
+    box.y = Math.max(0, oy + (e.clientY-startY)*sc.sy);
+    el.style.left = box.x+"px"; el.style.top = box.y+"px";
+  });
+  bar.addEventListener("pointerup",(e)=>{ if(dragging){ dragging=false; persist(); } });
+  bar.addEventListener("pointercancel",()=>{ dragging=false; });
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+  handle.addEventListener("pointerdown",(e)=>{
+    e.stopPropagation();
+    resizing=true; handle.setPointerCapture(e.pointerId);
+    startX=e.clientX; startY=e.clientY; ow=box.w; oh=box.h;
+  });
+  handle.addEventListener("pointermove",(e)=>{
+    if(!resizing) return;
+    const sc = pageScale();
+    box.w = Math.max(60, ow + (e.clientX-startX)*sc.sx);
+    box.h = Math.max(40, oh + (e.clientY-startY)*sc.sy);
+    el.style.width = box.w+"px"; el.style.height = box.h+"px";
+  });
+  handle.addEventListener("pointerup",()=>{ if(resizing){ resizing=false; persist(); } });
+  handle.addEventListener("pointercancel",()=>{ resizing=false; });
+}
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+/* ============================================================
+   CANVAS ÇİZİM ETKİLEŞİMİ (POINTER EVENTS)
+============================================================ */
+let drawingState = null; // {type, pageId, ink, ...}
+let polylinePoints = [];
+let activePolyPage = null;
+
+function toCanvasCoords(e, canvas){
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+  return { x:(e.clientX-rect.left)*scaleX, y:(e.clientY-rect.top)*scaleY };
+}
+
+function findSnapPoint(page, x, y, excludeLast){
+  if(!snapOn) return null;
+  const candidates = allCandidatePoints(page.strokes, -1);
+  let best=null, bestD=SNAP_TOL;
+  candidates.forEach(p=>{
+    const d = dist(x,y,p.x,p.y);
+    if(d<bestD){ bestD=d; best=p; }
+  });
+  return best;
+}
+
+function applyOrtho(x1,y1,x2,y2){
+  const dx=Math.abs(x2-x1), dy=Math.abs(y2-y1);
+  if(dx>dy) return {x:x2,y:y1}; else return {x:x1,y:y2};
+}
+
+function hitTestStroke(s, x, y){
+  if(s.type==="pen"){
+    for(let i=1;i<s.points.length;i++){
+      if(distToSeg(x,y,s.points[i-1].x,s.points[i-1].y,s.points[i].x,s.points[i].y) < HIT_TOL) return true;
+    }
+    return false;
+  }
+  if(s.type==="line"||s.type==="mdf"||s.type==="dim"){
+    return distToSeg(x,y,s.x1,s.y1,s.x2,s.y2) < HIT_TOL + (s.type==="mdf"?9*PX_PER_MM:0);
+  }
+  if(s.type==="rect"){
+    const x1=Math.min(s.x1,s.x2), x2=Math.max(s.x1,s.x2), y1=Math.min(s.y1,s.y2), y2=Math.max(s.y1,s.y2);
+    const edges=[[x1,y1,x2,y1],[x2,y1,x2,y2],[x2,y2,x1,y2],[x1,y2,x1,y1]];
+    return edges.some(ed=>distToSeg(x,y,ed[0],ed[1],ed[2],ed[3])<HIT_TOL);
+  }
+  if(s.type==="polyline"){
+    for(let i=1;i<s.points.length;i++){
+      if(distToSeg(x,y,s.points[i-1].x,s.points[i-1].y,s.points[i].x,s.points[i].y) < HIT_TOL) return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+function wirePagePointer(wrap, ink, page){
+  let pendingPen = null;
+
+  ink.addEventListener("pointerdown",(e)=>{
+    ink.setPointerCapture(e.pointerId);
+    let {x,y} = toCanvasCoords(e, ink);
+    const snap = findSnapPoint(page,x,y);
+    if(snap){ x=snap.x; y=snap.y; }
+
+    if(activeTool==="pen"){
+      pendingPen = { type:"pen", color:penColor, width:3, points:[{x,y}] };
+    } else if(activeTool==="eraser"){
+      eraseAt(page, x, y);
+    } else if(activeTool==="line" || activeTool==="mdf" || activeTool==="dim" || activeTool==="rect"){
+      drawingState = { type:activeTool, pageId:page.id, x1:x,y1:y,x2:x,y2:y };
+    } else if(activeTool==="polyline"){
+      if(activePolyPage !== page.id){ polylinePoints = []; activePolyPage = page.id; }
+      polylinePoints.push({x,y});
+      document.getElementById("finishPolyBtn").style.display = polylinePoints.length>=2 ? "inline-block":"none";
+      redrawWithPreview(page, ink);
+    } else if(activeTool==="select"){
+      let found=-1;
+      for(let i=page.strokes.length-1;i>=0;i--){ if(hitTestStroke(page.strokes[i],x,y)){ found=i; break; } }
+      if(found>=0){
+        selection = {pageId:page.id, index:found};
+        selection.dragStart = {x,y};
+        selection.strokeSnapshot = JSON.parse(JSON.stringify(page.strokes[found]));
+      } else {
+        selection = null;
       }
+      drawStrokes(ink, page.strokes, selection && selection.pageId===page.id ? selection.index : -1);
+    }
+  });
 
-      pdf.save(`cizim-notlarim-${formatCustomDate(current)}.pdf`);
-      showToast("PDF Aktarıldı");
-    }).catch(err=>{
-      showToast("PDF Hata Oluştu");
-    });
+  ink.addEventListener("pointermove",(e)=>{
+    let {x,y} = toCanvasCoords(e, ink);
+    const snap = findSnapPoint(page,x,y);
+    const guideEl = null;
+    if(snap){ x=snap.x; y=snap.y; }
+
+    if(activeTool==="pen" && pendingPen){
+      pendingPen.points.push({x,y});
+      drawStrokes(ink, page.strokes);
+      drawSingleStroke(ink.getContext("2d"), pendingPen, false);
+    } else if(drawingState && drawingState.pageId===page.id){
+      let x2=x, y2=y;
+      if(orthoOn || drawingState.type==="mdf"){
+        const o = applyOrtho(drawingState.x1, drawingState.y1, x2, y2);
+        x2=o.x; y2=o.y;
+      }
+      drawingState.x2=x2; drawingState.y2=y2;
+      drawStrokes(ink, page.strokes);
+      drawSingleStroke(ink.getContext("2d"), drawingState, false);
+    } else if(activeTool==="polyline" && activePolyPage===page.id && polylinePoints.length){
+      let lx=x, ly=y;
+      if(orthoOn && polylinePoints.length){
+        const last = polylinePoints[polylinePoints.length-1];
+        const o = applyOrtho(last.x,last.y,x,y); lx=o.x; ly=o.y;
+      }
+      redrawWithPreview(page, ink, {x:lx,y:ly});
+    } else if(activeTool==="select" && selection && selection.pageId===page.id && selection.dragStart){
+      const dx = x - selection.dragStart.x, dy = y - selection.dragStart.y;
+      moveStroke(selection.strokeSnapshot, page.strokes[selection.index], dx, dy);
+      drawStrokes(ink, page.strokes, selection.index);
+    }
+  });
+
+  function finishPointer(e){
+    if(activeTool==="pen" && pendingPen){
+      if(pendingPen.points.length>1) page.strokes.push(pendingPen);
+      pendingPen=null;
+      drawStrokes(ink, page.strokes);
+      persist();
+    } else if(drawingState && drawingState.pageId===page.id){
+      const s = drawingState; drawingState=null;
+      if(dist(s.x1,s.y1,s.x2,s.y2) > 4){
+        page.strokes.push({type:s.type, x1:s.x1,y1:s.y1,x2:s.x2,y2:s.y2, color: s.type==="line"?penColor:undefined});
+      }
+      drawStrokes(ink, page.strokes);
+      persist();
+    } else if(activeTool==="select" && selection && selection.pageId===page.id && selection.dragStart){
+      selection.dragStart=null; selection.strokeSnapshot=null;
+      persist();
+    }
   }
-  document.getElementById("exportPdfBtn").addEventListener("click", exportPdf);
+  ink.addEventListener("pointerup", finishPointer);
+  ink.addEventListener("pointercancel", finishPointer);
+}
 
-  function renderAll(){
-    overlay.innerHTML = "";
-    applyPages(day.pageCount || 1);
-    day.texts.forEach(t=>renderBox(t,"text"));
-    day.notes.forEach(n=>renderBox(n,"note"));
-    day.images.forEach(im=>renderImageBox(im));
-    redrawInk();
+function moveStroke(orig, target, dx, dy){
+  if(orig.type==="pen"){
+    target.points = orig.points.map(p=>({x:p.x+dx,y:p.y+dy}));
+  } else if(orig.type==="polyline"){
+    target.points = orig.points.map(p=>({x:p.x+dx,y:p.y+dy}));
+  } else if(orig.x1!==undefined){
+    target.x1=orig.x1+dx; target.y1=orig.y1+dy; target.x2=orig.x2+dx; target.y2=orig.y2+dy;
   }
+}
 
-  window.addEventListener("beforeunload", saveDayNow);
-  loadDay(current);
-  renderHeader();
-  renderAll();
-  renderCalendar();
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
+function redrawWithPreview(page, ink, previewPoint){
+  drawStrokes(ink, page.strokes);
+  if(polylinePoints.length){
+    const pts = previewPoint ? polylinePoints.concat([previewPoint]) : polylinePoints;
+    drawSingleStroke(ink.getContext("2d"), {type:"polyline", points:pts, color:penColor}, false);
   }
+}
+
+function eraseAt(page, x, y){
+  const before = page.strokes.length;
+  page.strokes = page.strokes.filter(s=> !hitTestStroke(s,x,y));
+  if(page.strokes.length!==before){
+    refreshPage(page.id);
+    persist();
+  }
+}
+
+function finishPolyline(){
+  if(activePolyPage && polylinePoints.length>=2){
+    const page = dayData.pages.find(p=>p.id===activePolyPage);
+    if(page){
+      page.strokes.push({type:"polyline", points:polylinePoints.slice(), color:penColor});
+      refreshPage(page.id);
+      persist();
+    }
+  }
+  polylinePoints=[]; activePolyPage=null;
+  document.getElementById("finishPolyBtn").style.display="none";
+}
+
+/* ============================================================
+   ARAÇ ÇUBUĞU OLAYLARI
+============================================================ */
+document.querySelectorAll(".tool[data-tool]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    if(activePolyPage && activeTool==="polyline" && btn.dataset.tool!=="polyline"){ finishPolyline(); }
+    activeTool = btn.dataset.tool;
+    document.querySelectorAll(".tool[data-tool]").forEach(b=>b.classList.toggle("active", b===btn));
+    document.getElementById("finishPolyBtn").style.display = (activeTool==="polyline" && polylinePoints.length>=2) ? "inline-block":"none";
+  });
+});
+document.querySelector('.tool[data-tool="pen"]').classList.add("active");
+
+document.getElementById("penColor").addEventListener("input", e=> penColor = e.target.value);
+
+document.getElementById("orthoBtn").addEventListener("click", function(){
+  orthoOn = !orthoOn; this.classList.toggle("on", orthoOn);
+});
+document.getElementById("snapBtn").addEventListener("click", function(){
+  snapOn = !snapOn; this.classList.toggle("on", snapOn);
+});
+document.getElementById("finishPolyBtn").addEventListener("click", finishPolyline);
+
+document.getElementById("deleteSelBtn").addEventListener("click", ()=>{
+  if(!selection) { showToast("Önce bir çizgi seçin"); return; }
+  const page = dayData.pages.find(p=>p.id===selection.pageId);
+  if(page){ page.strokes.splice(selection.index,1); selection=null; refreshPage(page.id); persist(); }
+});
+document.getElementById("copySelBtn").addEventListener("click", ()=>{
+  if(!selection) { showToast("Önce bir çizgi seçin"); return; }
+  const page = dayData.pages.find(p=>p.id===selection.pageId);
+  if(page){ clipboardStroke = JSON.parse(JSON.stringify(page.strokes[selection.index])); showToast("Kopyalandı"); }
+});
+document.getElementById("pasteSelBtn").addEventListener("click", ()=>{
+  if(!clipboardStroke){ showToast("Panoda çizgi yok"); return; }
+  const pageId = selection ? selection.pageId : (dayData.pages[0] && dayData.pages[0].id);
+  const page = dayData.pages.find(p=>p.id===pageId);
+  if(!page) return;
+  const clone = JSON.parse(JSON.stringify(clipboardStroke));
+  moveStroke(clone, clone, 24, 24);
+  page.strokes.push(clone);
+  refreshPage(page.id); persist();
+});
+
+document.getElementById("themeSelect").addEventListener("change", (e)=>{
+  const page = currentVisiblePage();
+  if(page){ page.theme = e.target.value; refreshPage(page.id); persist(); }
+});
+document.getElementById("gridSelect").addEventListener("change", (e)=>{
+  const page = currentVisiblePage();
+  if(page){ page.gridSize = Number(e.target.value); refreshPage(page.id); persist(); }
+});
+function currentVisiblePage(){
+  return selection ? dayData.pages.find(p=>p.id===selection.pageId) : dayData.pages[dayData.pages.length-1];
+}
+
+/* ---------- Fotoğraf ekleme ---------- */
+document.getElementById("addPhotoBtn").addEventListener("click", ()=> document.getElementById("fileInputPhoto").click());
+document.getElementById("fileInputPhoto").addEventListener("change", (e)=>{
+  const files = Array.from(e.target.files||[]);
+  const page = dayData.pages[dayData.pages.length-1];
+  let offset = 0;
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const canvas = document.createElement("canvas");
+        const maxW = 1000;
+        const scale = Math.min(1, maxW/img.width);
+        canvas.width = img.width*scale; canvas.height = img.height*scale;
+        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg",0.75);
+        page.boxes.push({ id:uid(), type:"image", x:60+offset, y:80+offset, w:280, h:210, src:dataUrl, locked:false });
+        offset += 24;
+        refreshPage(page.id); persist();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = "";
+});
+
+/* ---------- Not ekleme ---------- */
+document.getElementById("addNoteBtn").addEventListener("click", ()=>{
+  const page = dayData.pages[dayData.pages.length-1];
+  page.boxes.push({ id:uid(), type:"note", x:70, y:100, w:220, h:150, color:"#fff59d", text:"", locked:false });
+  refreshPage(page.id); persist();
+});
+
+/* ---------- Sayfa ekleme ---------- */
+document.getElementById("addPageBtn").addEventListener("click", ()=>{
+  dayData.pages.push(newPage());
+  renderAllPages(); persist();
+  workspace.scrollTo({top:workspace.scrollHeight, behavior:"smooth"});
+});
+
+/* ============================================================
+   GÜN NAVİGASYONU
+============================================================ */
+document.getElementById("prevDayBtn").addEventListener("click", ()=>{
+  const d = fromISO(currentDate); d.setDate(d.getDate()-1); loadDay(toISO(d));
+});
+document.getElementById("nextDayBtn").addEventListener("click", ()=>{
+  const d = fromISO(currentDate); d.setDate(d.getDate()+1); loadDay(toISO(d));
+});
+document.getElementById("todayBtn").addEventListener("click", ()=> loadDay(toISO(new Date())));
+document.getElementById("dateInput").addEventListener("change", (e)=>{ if(e.target.value) loadDay(e.target.value); });
+
+/* ============================================================
+   DIŞA AKTARMA: EXCEL
+============================================================ */
+document.getElementById("exportExcelBtn").addEventListener("click", async ()=>{
+  showToast("Excel hazırlanıyor...");
+  const allDates = collectAllLocalDates();
+  const rows = [];
+  for(const iso of allDates){
+    const d = loadLocal(iso);
+    if(!d) continue;
+    let combined = [];
+    d.pages.forEach(p=> p.boxes.forEach(b=>{ if(b.type==="note" && b.text && b.text.trim()) combined.push(b.text.trim()); }));
+    if(combined.length===0) continue;
+    rows.push({ "Tarih": iso, "Açıklama": combined.join(" | ") });
+  }
+  if(rows.length===0){ showToast("Aktarılacak not bulunamadı"); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Notlar");
+  XLSX.writeFile(wb, "cad_not_defteri.xlsx");
+});
+
+function collectAllLocalDates(){
+  const out=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.indexOf("cadnotdefteri_")===0) out.push(k.replace("cadnotdefteri_",""));
+  }
+  out.sort();
+  return out;
+}
+
+/* ============================================================
+   DIŞA AKTARMA: PDF
+============================================================ */
+document.getElementById("exportPdfBtn").addEventListener("click", async ()=>{
+  showToast("PDF hazırlanıyor...");
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit:"mm", format:"a4" });
+  const pageEls = Array.from(workspace.querySelectorAll(".pageWrap"));
+  for(let i=0;i<pageEls.length;i++){
+    const el = pageEls[i];
+    el.querySelectorAll(".delPageBtn, .boxBar, .resizeHandle").forEach(x=>x.style.visibility="hidden");
+    const canvas = await html2canvas(el, {scale:2, useCORS:true});
+    el.querySelectorAll(".delPageBtn, .boxBar, .resizeHandle").forEach(x=>x.style.visibility="visible");
+    const img = canvas.toDataURL("image/jpeg",0.9);
+    if(i>0) pdf.addPage();
+    pdf.addImage(img,"JPEG",0,0,210,297);
+    pdf.setFontSize(9);
+    pdf.text(currentDate+" - Sayfa "+(i+1), 5, 292);
+  }
+  pdf.save("cad_not_"+currentDate+".pdf");
+});
+
+/* ============================================================
+   ŞİFRE KİLİDİ
+============================================================ */
+function tryUnlock(){
+  const val = document.getElementById("pwInput").value;
+  if(val === APP_PASSWORD){
+    document.getElementById("lockScreen").style.display="none";
+    boot();
+  } else {
+    document.getElementById("lockError").textContent = "Şifre hatalı, tekrar deneyin.";
+    document.getElementById("pwInput").value="";
+    document.getElementById("pwInput").focus();
+  }
+}
+document.getElementById("lockBtn").addEventListener("click", tryUnlock);
+document.getElementById("pwInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") tryUnlock(); });
+
+/* ============================================================
+   BAŞLANGIÇ
+============================================================ */
+let booted = false;
+function boot(){
+  if(booted) return; booted = true;
+  loadDay(toISO(new Date()));
+}
+
+/* PWA: basit servis worker (sayfa önbellekleme) */
+if("serviceWorker" in navigator){
+  try{
+    const swCode = "self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{});";
+    const blob = new Blob([swCode], {type:"text/javascript"});
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+  }catch(e){}
+}
+
+/* Manifest (data URI) - kurulabilirlik için */
+try{
+  const manifest = {
+    name: "CAD Not Defteri", short_name: "CAD Defteri", start_url: ".", display: "standalone",
+    background_color: "#0f172a", theme_color: "#1e293b",
+    icons: [{ src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192'%3E%3Crect width='192' height='192' fill='%233b82f6'/%3E%3Ctext x='96' y='120' font-size='90' text-anchor='middle' fill='white'%3EC%3C/text%3E%3C/svg%3E", sizes:"192x192", type:"image/svg+xml" }]
+  };
+  const link = document.createElement("link");
+  link.rel="manifest";
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:"application/json"}));
+  document.head.appendChild(link);
+}catch(e){}
 
 })();
 </script>
