@@ -92,9 +92,9 @@
   .date-block{flex:1 1 auto;display:flex;flex-direction:column;line-height:1.05;min-width:0;cursor:pointer;}
   .date-block .weekday{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);}
   .date-block .full-date{font-family:'Space Mono',monospace;font-weight:700;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .cal-toggle{flex:0 0 auto;background:var(--amber);color:var(--navy);border:none;width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;}
+  .cal-toggle{flex:0 0 auto;background:var(--amber);color:var(--navy);border:none;width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .cal-toggle svg{width:19px;height:19px;}
-  .today-btn{flex:0 0 auto;background:var(--navy-2);border:1px solid #364252;color:#cfd6e0;font-family:'Space Mono',monospace;font-size:11px;padding:0 10px;height:34px;border-radius:8px;}
+  .today-btn{flex:0 0 auto;background:var(--navy-2);border:1px solid #364252;color:#cfd6e0;font-family:'Space Mono',monospace;font-size:11px;padding:0 10px;height:34px;border-radius:8px;cursor:pointer;}
 
   #calPopover{
     position:absolute;top:100%;right:12px;margin-top:6px;width:272px;background:var(--navy-2);
@@ -102,10 +102,10 @@
   }
   #calPopover.open{display:block;}
   .cal-head{display:flex;align-items:center;justify-content:space-between;color:#fff;font-family:'Space Mono',monospace;font-size:13px;margin-bottom:8px;}
-  .cal-head button{background:none;border:none;color:var(--amber);font-size:16px;padding:4px 8px;}
+  .cal-head button{background:none;border:none;color:var(--amber);font-size:16px;padding:4px 8px;cursor:pointer;}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
   .cal-dow{font-family:'Space Mono',monospace;font-size:9px;color:#8593a6;text-align:center;padding:3px 0;}
-  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#dfe4ea;border-radius:7px;position:relative;}
+  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#dfe4ea;border-radius:7px;position:relative;cursor:pointer;}
   .cal-day.other{color:#4a5568;}
   .cal-day.today{outline:1px solid var(--amber);}
   .cal-day.selected{background:var(--amber);color:var(--navy);font-weight:700;}
@@ -124,7 +124,7 @@
   .tool-btn svg{width:19px;height:19px;stroke:var(--navy);}
   .tool-btn.active{border-color:var(--navy);background:#EFE9DA;}
   .tool-sep{width:1px;align-self:stretch;background:var(--grid-line);flex:0 0 auto;margin:0 2px;}
-  .swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--grid-line);flex:0 0 auto;}
+  .swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--grid-line);flex:0 0 auto;cursor:pointer;}
   .swatch.active{box-shadow:0 0 0 2px var(--navy);}
   .tool-btn.danger svg{stroke:var(--danger);}
   .color-btn-wrap{position:relative;flex:0 0 auto;}
@@ -192,8 +192,8 @@
     background-color: var(--paper);
     transition: background-color 0.3s;
   }
-  #inkCanvas{position:absolute;inset:0;z-index:5;touch-action:none;}
-  #overlay{position:absolute;inset:0;pointer-events:none;z-index:10;}
+  #inkCanvas{position:absolute;inset:0;}
+  #overlay{position:absolute;inset:0;pointer-events:none;}
 
   .box{
     position:absolute;min-width:140px;min-height:90px;border-radius:8px;
@@ -258,6 +258,9 @@
 
   #undoBtn{position:relative;}
   #undoBtn:disabled{opacity:.35;pointer-events:none;}
+  
+  .drag-dots { font-size: 11px; color: #666; user-select: none; }
+  .color-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 0 0 1px #ddd; }
 </style>
 </head>
 <body>
@@ -567,6 +570,9 @@ function checkPass(){
   const dimEditor = document.getElementById("dimEditor");
   const dimValueInput = document.getElementById("dimValueInput");
   let activeEditLine = null;
+  
+  // Firebase listener referansı
+  let firebaseListener = null;
 
   function loadDay(d){
     const dayKey = keyOf(d);
@@ -585,11 +591,45 @@ function checkPass(){
     undoStack = [];
     updateUndoBtn();
 
-    db.ref('cad_notes/' + dayKey).on('value', (snapshot) => {
+    // Eski listener'ı temizle
+    if(firebaseListener) {
+      firebaseListener();
+      firebaseListener = null;
+    }
+
+    // Yeni listener
+    const ref = db.ref('cad_notes/' + dayKey);
+    firebaseListener = ref.on('value', (snapshot) => {
       const cloudData = snapshot.val();
       if(cloudData){
-        day = cloudData;
+        // AKILLI BİRLEŞTİRME - Verileri koru
+        const localInk = day.ink || [];
+        const localTexts = day.texts || [];
+        const localNotes = day.notes || [];
+        const localImages = day.images || [];
+        const localPageCount = day.pageCount || 1;
+        
+        // Cloud verilerini al
+        const cloudInk = cloudData.ink || [];
+        const cloudTexts = cloudData.texts || [];
+        const cloudNotes = cloudData.notes || [];
+        const cloudImages = cloudData.images || [];
+        const cloudPageCount = cloudData.pageCount || 1;
+        
+        // En güncel veriyi birleştir (cloud daha güncel kabul edilir, ancak yerel değişiklikler korunur)
+        // Basit strateji: Cloud'dan gelen verilerle yerel verileri birleştir
+        // Daha karmaşık bir strateji için timestamp kullanılabilir
+        day.ink = cloudInk.length > 0 ? cloudInk : localInk;
+        day.texts = cloudTexts.length > 0 ? cloudTexts : localTexts;
+        day.notes = cloudNotes.length > 0 ? cloudNotes : localNotes;
+        day.images = cloudImages.length > 0 ? cloudImages : localImages;
+        day.pageCount = cloudPageCount || localPageCount;
+        
+        // ID'leri kontrol et
+        day.ink.forEach(it=>{ if(!it.id) it.id = uid(); });
+        
         renderAll();
+        showToast("Buluttan veriler alındı ve birleştirildi ☁️");
       }
     });
   }
@@ -599,8 +639,12 @@ function checkPass(){
     const dayKey = keyOf(current);
     localStorage.setItem(STORAGE_PREFIX + dayKey, JSON.stringify(day));
     
-    db.ref('cad_notes/' + dayKey).set(day);
-    showToast("Buluta Senkronize Edildi ☁️");
+    db.ref('cad_notes/' + dayKey).set(day).then(() => {
+      // Sadece başarılı olduğunda bildir
+    }).catch(err => {
+      console.warn("Firebase kayıt hatası:", err);
+    });
+    // showToast("Buluta Senkronize Edildi ☁️");
   }
 
   function saveDaySoon(){
@@ -612,7 +656,7 @@ function checkPass(){
     toast.textContent = msg;
     toast.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=>toast.classList.remove("show"), 900);
+    toastTimer = setTimeout(()=>toast.classList.remove("show"), 1200);
   }
 
   function renderHeader(){
@@ -755,6 +799,7 @@ function checkPass(){
       snapSettings[k] = !snapSettings[k];
       item.classList.toggle("on", snapSettings[k]);
       item.textContent = item.textContent.replace(" ✓","") + (snapSettings[k] ? " ✓" : "");
+      showToast(snapSettings[k] ? k + " aktif" : k + " pasif");
     });
   });
 
@@ -784,13 +829,7 @@ function checkPass(){
       redrawInk();
     }
 
-    if (["pen","eraser","line","mdf18","dimension","rect","polyline","select"].includes(name)) {
-      canvas.style.pointerEvents = "auto";
-      canvas.style.touchAction = "none";
-    } else {
-      canvas.style.pointerEvents = "none";
-      canvas.style.touchAction = "pan-y";
-    }
+    canvas.style.touchAction = ["pen","eraser","line","mdf18","dimension","rect","polyline","select"].includes(name) ? "none" : "pan-y";
   }
 
   document.querySelectorAll(".tool-btn[data-tool]").forEach(btn=>{
@@ -921,20 +960,29 @@ function checkPass(){
     updatePageLabel();
   });
 
+  // === AutoCAD TARZI SNAP VE ORTHO SİSTEMİ ===
   function findSnapPoint(pt, currentStart){
     const tol = 24;
     let best=null, bestD=tol, type=null;
     activeTrackingLines = [];
 
+    // Tüm çizgileri kontrol et
     day.ink.forEach(item=>{
-      if(item.type!=="path" || !item.pts) return;
+      if(item.type!=="path" || !item.pts || item.pts.length < 2) return;
       const pts = item.pts;
+      
+      // Uç Nokta Snap
       if(snapSettings.endpoint){
-        pts.forEach(p=>{
-          const d = Math.hypot(p[0]-pt[0], p[1]-pt[1]);
-          if(d<bestD){ bestD=d; best=p; type="endpoint"; }
-        });
+        // İlk nokta
+        const d1 = Math.hypot(pts[0][0]-pt[0], pts[0][1]-pt[1]);
+        if(d1<bestD){ bestD=d1; best=pts[0]; type="endpoint"; }
+        // Son nokta
+        const last = pts[pts.length-1];
+        const d2 = Math.hypot(last[0]-pt[0], last[1]-pt[1]);
+        if(d2<bestD){ bestD=d2; best=last; type="endpoint"; }
       }
+      
+      // Orta Nokta Snap
       if(snapSettings.midpoint && pts.length>=2){
         for(let i=0;i<pts.length-1;i++){
           const mid = [(pts[i][0]+pts[i+1][0])/2, (pts[i][1]+pts[i+1][1])/2];
@@ -944,6 +992,7 @@ function checkPass(){
       }
     });
 
+    // Polyline noktalarına snap
     if(polyPts && polyPts.length > 0){
       polyPts.forEach(p=>{
         const d = Math.hypot(p[0]-pt[0], p[1]-pt[1]);
@@ -953,21 +1002,28 @@ function checkPass(){
 
     if(best) return {pt: best, type};
 
+    // Tracking 90° (AutoCAD tarzı hizalama)
     if(snapSettings.tracking){
       let trackedPt = null;
 
       day.ink.forEach(item=>{
         if(trackedPt || item.type!=="path" || !item.pts) return;
         item.pts.forEach(p=>{
-          if(Math.abs(pt[0] - p[0]) < 20){
-            trackedPt = [p[0], pt[1]];
+          // Yatay hizalama
+          if(Math.abs(pt[1] - p[1]) < 20){
+            if(!trackedPt){
+              trackedPt = [pt[0], p[1]];
+            } else {
+              trackedPt[1] = p[1];
+            }
             activeTrackingLines.push({ from: p, to: trackedPt });
           }
-          if(Math.abs(pt[1] - p[1]) < 20){
-            if(trackedPt){
-              trackedPt[1] = p[1];
+          // Dikey hizalama
+          if(Math.abs(pt[0] - p[0]) < 20){
+            if(!trackedPt){
+              trackedPt = [p[0], pt[1]];
             } else {
-              trackedPt = [pt[0], p[1]];
+              trackedPt[0] = p[0];
             }
             activeTrackingLines.push({ from: p, to: trackedPt });
           }
@@ -1053,9 +1109,10 @@ function checkPass(){
       return;
     }
 
-    ctx.strokeStyle = p.selected ? "#E8A33D" : (p.color || "#1B2430");
+    const isSelected = p.selected;
+    ctx.strokeStyle = isSelected ? "#E8A33D" : (p.color || "#1B2430");
     ctx.fillStyle = p.isMdf ? "rgba(232, 163, 61, 0.18)" : ctx.strokeStyle;
-    ctx.lineWidth = p.selected ? (p.width || 2.5) + 2 : (p.width || 2.5);
+    ctx.lineWidth = isSelected ? (p.width || 2.5) + 3 : (p.width || 2.5);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
@@ -1076,6 +1133,16 @@ function checkPass(){
     }
     ctx.stroke();
 
+    // Seçili çizgiye vurgu işareti
+    if(isSelected){
+      ctx.save();
+      ctx.strokeStyle = "#00FF66";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     if(p.isCadLine && p.pts.length>=2){
       for(let i=0;i<p.pts.length-1;i++){
         if(p.isMdf && i > 0) break;
@@ -1084,6 +1151,23 @@ function checkPass(){
         if(len > 3) drawDimensionLabelWithPointer(p1, p2, len);
       }
     }
+  }
+
+  // roundRect polyfill
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+      const r = typeof radii === 'number' ? radii : (radii || 0);
+      this.moveTo(x + r, y);
+      this.lineTo(x + w - r, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + r);
+      this.lineTo(x + w, y + h - r);
+      this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      this.lineTo(x + r, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - r);
+      this.lineTo(x, y + r);
+      this.quadraticCurveTo(x, y, x + r, y);
+      return this;
+    };
   }
 
   function drawAutoCadDimension(dim){
@@ -1203,7 +1287,7 @@ function checkPass(){
     const [x,y] = activeSnapMarker.pt;
     ctx.save();
     ctx.strokeStyle = "#00FF66";
-    ctx.fillStyle = "rgba(0, 255, 102, 0.3)";
+    ctx.fillStyle = "rgba(0, 255, 102, 0.25)";
     ctx.lineWidth = 2.5;
 
     if(activeSnapMarker.type==="tracking90"){
@@ -1217,8 +1301,18 @@ function checkPass(){
       ctx.moveTo(x, y-9); ctx.lineTo(x-9, y+7); ctx.lineTo(x+9, y+7); ctx.closePath();
       ctx.fill(); ctx.stroke();
     } else {
-      ctx.fillRect(x-7, y-7, 14, 14);
-      ctx.strokeRect(x-7, y-7, 14, 14);
+      // Endpoint - kare
+      ctx.fillRect(x-6, y-6, 12, 12);
+      ctx.strokeRect(x-6, y-6, 12, 12);
+      // Çapraz çizgi
+      ctx.strokeStyle = "#00FF66";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x-4, y-4);
+      ctx.lineTo(x+4, y+4);
+      ctx.moveTo(x+4, y-4);
+      ctx.lineTo(x-4, y+4);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -1465,16 +1559,19 @@ function checkPass(){
 
     if(tool==="select"){
       let found = false;
-      day.ink.forEach(item=>{
-        if(item.type!=="path" || !item.pts) return;
-        for(let i=0;i<item.pts.length-1;i++){
-          if(distToSegment(pt, item.pts[i], item.pts[i+1]) < 14){
+      // Çizgileri ters sırada kontrol et (üstteki önce seçilsin)
+      for(let i=day.ink.length-1; i>=0; i--){
+        const item = day.ink[i];
+        if(item.type!=="path" || !item.pts) continue;
+        for(let j=0;j<item.pts.length-1;j++){
+          if(distToSegment(pt, item.pts[j], item.pts[j+1]) < 14){
             item.selected = !item.selected;
             found = true;
             break;
           }
         }
-      });
+        if(found) break;
+      }
       if(found){ updateSelectBar(); redrawInk(); return; }
     }
 
@@ -1625,7 +1722,6 @@ function checkPass(){
     if(kind==="note"){
       const cdot = document.createElement("div");
       cdot.className = "color-dot"; cdot.style.background = item.color;
-      cdot.style.width = "18px"; cdot.style.height = "18px"; cdot.style.borderRadius = "50%";
       cdot.addEventListener("click",(e)=>{
         e.stopPropagation();
         let idx = NOTE_PALETTE.indexOf(item.color);
@@ -1747,7 +1843,9 @@ function checkPass(){
 
     const head = document.createElement("div");
     head.className = "box-head";
-    head.innerHTML = '<div class="drag-dots">⣿ TAŞI</div>';
+    const dots = document.createElement("div");
+    dots.className = "drag-dots"; dots.textContent = "⣿ TAŞI";
+    head.appendChild(dots);
 
     const btns = document.createElement("div");
     btns.className = "box-btns";
@@ -1880,6 +1978,7 @@ function checkPass(){
     day.texts.forEach(t=>renderBox(t,"text"));
     day.notes.forEach(n=>renderBox(n,"note"));
     day.images.forEach(im=>renderImageBox(im));
+    redrawInk();
   }
 
   window.addEventListener("beforeunload", saveDayNow);
