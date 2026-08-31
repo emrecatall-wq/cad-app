@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#1B2430">
 <title>AutoCAD Tarzı CAD Çizim ve Not Defteri</title>
 
-<!-- PWA Manifest & Icons -->
+<!-- PWA Manifest -->
 <link rel="manifest" href="manifest.json">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<!-- Firebase SDK (Bulut Senkronizasyon İçin) -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
@@ -40,7 +40,6 @@
     --grid-size: 26px;
   }
   
-  /* Sayfa Temaları */
   body.theme-light-grey { --paper: #E9ECEF; --grid-line: #CED4DA; --text-dark: #212529; }
   body.theme-sepia      { --paper: #F4ECD8; --grid-line: #E2D7BF; --text-dark: #4A3B32; }
   body.theme-cream      { --paper: #FFFDD0; --grid-line: #EEDC9A; --text-dark: #333333; }
@@ -197,9 +196,9 @@
   #overlay{position:absolute;inset:0;pointer-events:none;}
 
   .box{
-    position:absolute;min-width:90px;min-height:60px;border-radius:8px;
+    position:absolute;min-width:140px;min-height:90px;border-radius:8px;
     box-shadow:0 3px 10px rgba(27,36,48,.18);display:flex;flex-direction:column;
-    touch-action:none;pointer-events:auto;
+    touch-action:none;pointer-events:auto;z-index:2;
   }
   .box.text-box{background:#FFFDF6;border:1px solid var(--grid-line);}
   
@@ -208,7 +207,7 @@
     padding:0 8px;cursor:grab;border-top-left-radius:8px;border-top-right-radius:8px;background:rgba(27,36,48,.08);
   }
   .box.note-box .box-head{background:rgba(27,36,48,.12);}
-  .box.image-box{background:#eee;padding:0;min-width:70px;min-height:70px;}
+  .box.image-box{background:#eee;padding:0;min-width:80px;min-height:80px;}
   .box.image-box .box-head{
     opacity:0;pointer-events:none;transition:opacity .15s;position:absolute;top:-34px;left:0;right:0;height:32px;
     z-index:10;background:var(--navy);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);padding:0 8px;
@@ -236,8 +235,13 @@
   .img-frame img{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;-webkit-user-drag:none;user-select:none;}
   .box.image-box.crop-mode .img-frame{outline:3px solid var(--amber);outline-offset:-3px;}
 
-  .box-body{flex:1 1 auto;padding:8px 10px;font-size:14px;line-height:1.35;overflow:hidden;outline:none;user-select:text;-webkit-user-select:text;white-space:pre-wrap;word-break:break-word;}
-  .box.locked .box-body{contenteditable:false;user-select:none;}
+  /* Düzeltilmiş Mobil Not Metin Alanı */
+  .box-body{
+    flex:1 1 auto;padding:8px 10px;font-size:14px;line-height:1.35;overflow-y:auto;outline:none;
+    user-select:text;-webkit-user-select:text;white-space:pre-wrap;word-break:break-word;
+    color: var(--text-dark); background: transparent; border: none; width: 100%; height: 100%;
+  }
+  .box.locked .box-body{user-select:none;-webkit-user-select:none;}
   .resize-handle{position:absolute;right:2px;bottom:2px;width:18px;height:18px;cursor:nwse-resize;opacity:.6;}
 
   #toast{
@@ -482,21 +486,19 @@
 <script>
 // --- FIREBASE KURULUMU ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCFKton3snkeqQYELSuiy5e5TaxLGkjMD0",
-  authDomain: "cad-notlar.firebaseapp.com",
-  databaseURL: "https://cad-notlar-default-rtdb.firebaseio.com",
-  projectId: "cad-notlar",
-  storageBucket: "cad-notlar.firebasestorage.app",
-  messagingSenderId: "21454455978",
-  appId: "1:21454455978:web:ba1680b94ff8539179bcd3",
-  measurementId: "G-LVS4NSKPTT"
-
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "APP_ID"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // --- ŞİFRE KORUMASI ---
-const MASTER_PIN = "156155"; // Giriş şifrenizi buradan değiştirebilirsiniz
+const MASTER_PIN = "1234"; 
 const lockOverlay = document.getElementById("lockOverlay");
 const passInput = document.getElementById("passInput");
 const unlockBtn = document.getElementById("unlockBtn");
@@ -581,7 +583,6 @@ function checkPass(){
 
   function loadDay(d){
     const dayKey = keyOf(d);
-    // 1. Önce yerel depolamadan yükle
     const raw = localStorage.getItem(STORAGE_PREFIX + dayKey);
     if(raw){
       try{ day = JSON.parse(raw); }catch(e){ day = {ink:[],texts:[],notes:[],images:[]}; }
@@ -597,7 +598,6 @@ function checkPass(){
     undoStack = [];
     updateUndoBtn();
 
-    // 2. Buluttan (Firebase) canlı dinle
     db.ref('cad_notes/' + dayKey).on('value', (snapshot) => {
       const cloudData = snapshot.val();
       if(cloudData){
@@ -612,7 +612,6 @@ function checkPass(){
     const dayKey = keyOf(current);
     localStorage.setItem(STORAGE_PREFIX + dayKey, JSON.stringify(day));
     
-    // Bulut Veritabanına Anlık Senkronize Et
     db.ref('cad_notes/' + dayKey).set(day);
     showToast("Buluta Senkronize Edildi ☁️");
   }
@@ -1581,10 +1580,10 @@ function checkPass(){
   });
 
   wrap.addEventListener("click",(e)=>{
-    if(e.target !== canvas) return;
+    if(e.target !== canvas && e.target !== canvasInner) return;
     if(tool==="note"){
       const rect = canvasInner.getBoundingClientRect();
-      addNote({x:e.clientX-rect.left-70, y:e.clientY-rect.top-30, w:160, h:120, text:"", color:noteColor, locked:false});
+      addNote({x:e.clientX-rect.left-70, y:e.clientY-rect.top-30, w:180, h:130, text:"", color:noteColor, locked:false});
       saveDaySoon();
     }
   });
@@ -1598,6 +1597,7 @@ function checkPass(){
 
   const NOTE_PALETTE = ["#FFD966","#A8D8B9","#A9CCE3","#F2B5A0","#C9B6E4","#FFFFFF"];
 
+  // MOBİL KLAVYE VE MİKROFON İLE YAZI DÜZELTMESİ YAPILDI
   function renderBox(item, kind){
     const box = document.createElement("div");
     box.className = "box " + (kind==="text" ? "text-box" : "note-box");
@@ -1617,15 +1617,15 @@ function checkPass(){
     confirmBtn.className = "box-confirm-btn" + (item.locked ? " confirmed" : "");
     confirmBtn.textContent = "✓";
     confirmBtn.title = item.locked ? "Düzenle" : "Metni Onayla";
-    confirmBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+    
     confirmBtn.addEventListener("click", (e)=>{
       e.stopPropagation();
       item.locked = !item.locked;
       box.classList.toggle("locked", item.locked);
-      body.contentEditable = item.locked ? "false" : "true";
+      textarea.readOnly = item.locked;
       confirmBtn.classList.toggle("confirmed", item.locked);
-      if(item.locked) body.blur();
-      else body.focus();
+      if(item.locked) textarea.blur();
+      else textarea.focus();
       saveDaySoon();
     });
     btns.appendChild(confirmBtn);
@@ -1634,7 +1634,6 @@ function checkPass(){
       const cdot = document.createElement("div");
       cdot.className = "color-dot"; cdot.style.background = item.color;
       cdot.style.width = "18px"; cdot.style.height = "18px"; cdot.style.borderRadius = "50%";
-      cdot.addEventListener("pointerdown", (e) => e.stopPropagation());
       cdot.addEventListener("click",(e)=>{
         e.stopPropagation();
         let idx = NOTE_PALETTE.indexOf(item.color);
@@ -1646,7 +1645,6 @@ function checkPass(){
     }
     const xBtn = document.createElement("div");
     xBtn.className = "box-x"; xBtn.textContent = "×";
-    xBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
     xBtn.addEventListener("click",(e)=>{
       e.stopPropagation();
       const arr = kind==="text" ? day.texts : day.notes;
@@ -1656,17 +1654,22 @@ function checkPass(){
     });
     btns.appendChild(xBtn); head.appendChild(dots); head.appendChild(btns);
 
-    const body = document.createElement("div");
-    body.className = "box-body"; body.contentEditable = item.locked ? "false" : "true";
-    body.textContent = item.text || "";
-    body.addEventListener("input", ()=>{ item.text = body.innerText; saveDaySoon(); });
-    body.addEventListener("pointerdown",(e)=> e.stopPropagation());
+    // Textarea ile tam klavye ve mikrofon uyumu
+    const textarea = document.createElement("textarea");
+    textarea.className = "box-body";
+    textarea.value = item.text || "";
+    textarea.placeholder = "Not yazın veya sesle söyleyin...";
+    textarea.readOnly = item.locked;
+
+    textarea.addEventListener("input", ()=>{ item.text = textarea.value; saveDaySoon(); });
+    textarea.addEventListener("pointerdown", (e)=> e.stopPropagation());
+    textarea.addEventListener("touchstart", (e)=> e.stopPropagation());
 
     const resize = document.createElement("div");
     resize.className = "resize-handle";
     resize.innerHTML = '<svg viewBox="0 0 16 16"><path d="M14 2 2 14M14 8 8 14M14 14 14 14" stroke="#1B2430" stroke-width="1.5"/></svg>';
 
-    box.appendChild(head); box.appendChild(body); box.appendChild(resize);
+    box.appendChild(head); box.appendChild(textarea); box.appendChild(resize);
     overlay.appendChild(box);
 
     let dragging=false, dragOX=0, dragOY=0;
@@ -1693,40 +1696,59 @@ function checkPass(){
     });
     resize.addEventListener("pointermove",(e)=>{
       if(!resizing) return;
-      item.w = Math.max(90, startW + (e.clientX-startX));
-      item.h = Math.max(60, startH + (e.clientY-startY));
+      item.w = Math.max(120, startW + (e.clientX-startX));
+      item.h = Math.max(80, startH + (e.clientY-startY));
       box.style.width = item.w+"px"; box.style.height = item.h+"px";
     });
     resize.addEventListener("pointerup",()=>{ if(resizing){resizing=false; saveDaySoon();} });
   }
 
+  // RESİM YÜKLEME VE SIKIŞTIRMA DÜZELTMESİ
   document.getElementById("photoBtn").addEventListener("click", ()=>document.getElementById("photoInput").click());
   document.getElementById("photoInput").addEventListener("change",(e)=>{
-    Array.from(e.target.files||[]).forEach((f,idx)=>{
+    const files = Array.from(e.target.files||[]);
+    if(files.length === 0) return;
+    
+    files.forEach((f, idx)=>{
       const reader = new FileReader();
-      reader.onload = ()=> addImageFromDataUrl(reader.result, idx);
+      reader.onload = (evt)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          // Performans ve yükleme hatasını önlemek için resmi boyutlandır
+          const maxDim = 800;
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          const cvs = document.createElement('canvas');
+          cvs.width = w; cvs.height = h;
+          const c2d = cvs.getContext('2d');
+          c2d.drawImage(img, 0, 0, w, h);
+          const resizedDataUrl = cvs.toDataURL('image/jpeg', 0.8);
+
+          addImageFromDataUrl(resizedDataUrl, idx, w, h);
+        };
+        img.src = evt.target.result;
+      };
       reader.readAsDataURL(f);
     });
     e.target.value = "";
   });
 
-  function addImageFromDataUrl(dataUrl, cascadeIdx){
-    const tmp = new Image();
-    tmp.onload = ()=>{
-      const w = 150, h = 150;
-      const coverScale = Math.max(w/tmp.naturalWidth, h/tmp.naturalHeight);
-      const cascade = (cascadeIdx||0)*16;
-      const item = {
-        id:uid(), x: Math.max(8, wrap.clientWidth/2 - 75 + cascade),
-        y: wrap.scrollTop + 40 + cascade, w, h, dataUrl,
-        naturalW:tmp.naturalWidth, naturalH:tmp.naturalHeight, scale:coverScale,
-        panX:(w-tmp.naturalWidth*coverScale)/2, panY:(h-tmp.naturalHeight*coverScale)/2
-      };
-      day.images.push(item);
-      renderImageBox(item);
-      saveDaySoon();
+  function addImageFromDataUrl(dataUrl, cascadeIdx, naturalW, naturalH){
+    const w = 180, h = 180;
+    const coverScale = Math.max(w/naturalW, h/naturalH);
+    const cascade = (cascadeIdx||0)*16;
+    const item = {
+      id:uid(), x: Math.max(8, wrap.clientWidth/2 - 90 + cascade),
+      y: wrap.scrollTop + 40 + cascade, w, h, dataUrl,
+      naturalW, naturalH, scale:coverScale,
+      panX:(w-naturalW*coverScale)/2, panY:(h-naturalH*coverScale)/2
     };
-    tmp.src = dataUrl;
+    day.images.push(item);
+    renderImageBox(item);
+    saveDaySoon();
   }
 
   function renderImageBox(item){
@@ -1745,16 +1767,13 @@ function checkPass(){
     const cropBtn = document.createElement("div");
     cropBtn.className = "crop-toggle"; cropBtn.textContent = "⤢";
     cropBtn.title = "Kırp";
-    cropBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
 
     const cropConfirmBtn = document.createElement("div");
     cropConfirmBtn.className = "crop-confirm-btn"; cropConfirmBtn.textContent = "✓";
     cropConfirmBtn.title = "Kırpmayı Onayla";
-    cropConfirmBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
 
     const xBtn = document.createElement("div");
     xBtn.className = "box-x"; xBtn.textContent = "×";
-    xBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
     xBtn.addEventListener("click",(e)=>{
       e.stopPropagation();
       const idx = day.images.findIndex(it=>it.id===item.id);
@@ -1954,7 +1973,6 @@ function checkPass(){
   renderAll();
   renderCalendar();
 
-  // PWA Service Worker Kaydı
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');
   }
