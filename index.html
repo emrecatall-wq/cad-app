@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1B2430">
+<title>AutoCAD Tarzı CAD Çizim ve Not Defteri</title>
+
+<!-- PWA Manifest & Icons -->
+<link rel="manifest" href="manifest.json">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Excel Dışa Aktarma -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- PDF Dışa Aktarma Kütüphaneleri -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Firebase SDK (Bulut Senkronizasyon İçin) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+<style>
+  :root{
+    --navy:#1B2430;
+    --navy-2:#242F3E;
+    --amber:#E8A33D;
+    --ink-blue:#2B4C7E;
+    --paper:#F7F5EF;
+    --grid-line:#DDE1E7;
+    --text-dark:#1B2430;
+    --danger:#B23A48;
+    --snap:#00FF66;
+    --grid-size: 26px;
+  }
+  
+  /* Sayfa Temaları */
+  body.theme-light-grey { --paper: #E9ECEF; --grid-line: #CED4DA; --text-dark: #212529; }
+  body.theme-sepia      { --paper: #F4ECD8; --grid-line: #E2D7BF; --text-dark: #4A3B32; }
+  body.theme-cream      { --paper: #FFFDD0; --grid-line: #EEDC9A; --text-dark: #333333; }
+  body.theme-dark       { --paper: #1E1E1E; --grid-line: #333333; --text-dark: #E0E0E0; }
+  body.theme-pale-blue  { --paper: #E8F1F5; --grid-line: #C3D5E0; --text-dark: #1C2D37; }
+  body.theme-pale-green { --paper: #EAF2E8; --grid-line: #C5DAC1; --text-dark: #1F331C; }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    height:100%;margin:0;overflow:hidden;overscroll-behavior:none;
+    font-family:'Inter',sans-serif;color:var(--text-dark);
+    -webkit-user-select:none;user-select:none;
+    background: var(--navy);
+  }
+
+  /* Şifre Kilit Ekranı Modal */
+  #lockOverlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--navy); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; color: #fff; padding: 20px;
+  }
+  #lockOverlay.unlocked { display: none; }
+  .lock-card {
+    background: var(--navy-2); border: 1px solid #364252; padding: 30px;
+    border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 320px;
+  }
+  .lock-title { font-family: 'Space Mono', monospace; font-size: 16px; color: var(--amber); }
+  .lock-input {
+    width: 100%; background: #141A22; border: 1px solid #364252; color: #fff;
+    font-size: 24px; text-align: center; padding: 10px; border-radius: 8px; letter-spacing: 0.3em; outline: none;
+  }
+  .lock-btn {
+    width: 100%; background: var(--amber); color: var(--navy); border: none;
+    padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 15px;
+  }
+
+  #app{height:100dvh;width:100vw;display:flex;flex-direction:column;background:var(--navy);}
+
+  header{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 12px;
+    padding-top:max(10px, env(safe-area-inset-top));background:var(--navy);color:#fff;
+    position:relative;z-index:30;
+  }
+  .day-nav-btn{
+    background:var(--navy-2);border:1px solid #364252;color:#fff;
+    width:34px;height:34px;border-radius:8px;font-size:18px;
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+  }
+  .date-block{flex:1 1 auto;display:flex;flex-direction:column;line-height:1.05;min-width:0;cursor:pointer;}
+  .date-block .weekday{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);}
+  .date-block .full-date{font-family:'Space Mono',monospace;font-weight:700;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cal-toggle{flex:0 0 auto;background:var(--amber);color:var(--navy);border:none;width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;}
+  .cal-toggle svg{width:19px;height:19px;}
+  .today-btn{flex:0 0 auto;background:var(--navy-2);border:1px solid #364252;color:#cfd6e0;font-family:'Space Mono',monospace;font-size:11px;padding:0 10px;height:34px;border-radius:8px;}
+
+  #calPopover{
+    position:absolute;top:100%;right:12px;margin-top:6px;width:272px;background:var(--navy-2);
+    border:1px solid #364252;border-radius:12px;box-shadow:0 12px 28px rgba(0,0,0,.4);padding:10px;z-index:40;display:none;
+  }
+  #calPopover.open{display:block;}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;color:#fff;font-family:'Space Mono',monospace;font-size:13px;margin-bottom:8px;}
+  .cal-head button{background:none;border:none;color:var(--amber);font-size:16px;padding:4px 8px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  .cal-dow{font-family:'Space Mono',monospace;font-size:9px;color:#8593a6;text-align:center;padding:3px 0;}
+  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#dfe4ea;border-radius:7px;position:relative;}
+  .cal-day.other{color:#4a5568;}
+  .cal-day.today{outline:1px solid var(--amber);}
+  .cal-day.selected{background:var(--amber);color:var(--navy);font-weight:700;}
+  .cal-day .dot{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--ink-blue);}
+
+  #toolbar{
+    flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:7px 8px;
+    background:var(--paper);border-bottom:1px solid var(--grid-line);overflow-x:auto;z-index:20;
+    transition: background 0.3s;
+  }
+  .tool-btn{
+    flex:0 0 auto;height:38px;padding:0 10px;border-radius:9px;border:1.5px solid transparent;
+    background:#fff;display:flex;align-items:center;justify-content:center;gap:6px;
+    box-shadow:0 1px 2px rgba(27,36,48,.12);font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;
+  }
+  .tool-btn svg{width:19px;height:19px;stroke:var(--navy);}
+  .tool-btn.active{border-color:var(--navy);background:#EFE9DA;}
+  .tool-sep{width:1px;align-self:stretch;background:var(--grid-line);flex:0 0 auto;margin:0 2px;}
+  .swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--grid-line);flex:0 0 auto;}
+  .swatch.active{box-shadow:0 0 0 2px var(--navy);}
+  .tool-btn.danger svg{stroke:var(--danger);}
+  .color-btn-wrap{position:relative;flex:0 0 auto;}
+  .color-btn{width:24px;height:24px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--grid-line);margin:0 2px;cursor:pointer;}
+  .color-popover{position:fixed;display:none;gap:6px;background:#fff;border:1px solid var(--grid-line);border-radius:10px;padding:7px;box-shadow:0 8px 18px rgba(27,36,48,.25);z-index:60;}
+  .color-popover.open{display:flex;}
+
+  .tool-popover{
+    position:fixed;display:none;flex-direction:column;gap:4px;background:#fff;
+    border:1px solid var(--grid-line);border-radius:12px;padding:8px;
+    box-shadow:0 8px 22px rgba(27,36,48,.25);z-index:60;min-width:210px;
+  }
+  .tool-popover.open{display:flex;}
+  .draw-opt{
+    display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;border:none;
+    background:#f5f4ef;font-family:'Inter',sans-serif;font-size:13px;color:var(--navy);text-align:left;cursor:pointer;
+  }
+  .draw-opt svg{width:17px;height:17px;stroke:var(--navy);flex:0 0 auto;}
+  .draw-opt.active{background:var(--amber);color:var(--navy);font-weight:600;}
+
+  #viewSettingsPopover{
+    position:fixed;display:none;flex-direction:column;gap:10px;background:#fff;
+    border:1px solid var(--grid-line);border-radius:12px;padding:12px;
+    box-shadow:0 8px 22px rgba(27,36,48,.25);z-index:60;width:240px;
+  }
+  #viewSettingsPopover.open{display:flex;}
+  .pop-title{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px;}
+  .theme-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:6px;}
+  .theme-chip{
+    height:32px;border-radius:6px;border:1px solid #ccc;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;
+  }
+  .theme-chip.active{border:2px solid var(--amber);font-weight:700;}
+
+  #snapMenuPanel{
+    position:fixed;display:none;flex-direction:column;gap:4px;background:#fff;
+    border:1px solid var(--grid-line);border-radius:12px;padding:8px;
+    box-shadow:0 8px 22px rgba(27,36,48,.25);z-index:65;min-width:210px;
+  }
+  #snapMenuPanel.open{display:flex;}
+  .snap-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--navy);cursor:pointer;background:#f8f7f2;}
+  .snap-item:hover{background:#edebe1;}
+  .snap-item.on{font-weight:600;color:#00aa44;}
+
+  #polyBar, #selectBar{
+    position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);z-index:46;background:var(--navy);border-radius:24px;
+    padding:6px 10px;display:none;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  #polyBar.show, #selectBar.show{display:flex;}
+  #polyBar button, #selectBar button{
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+    padding:8px 16px;border-radius:18px;border:none;color:#fff;cursor:pointer;
+  }
+  #polyDone{background:#3a9d5c;}
+  #polyCancel{background:var(--navy-2);}
+  #btnCopySelected{background:var(--amber);color:var(--navy);}
+  #btnDeleteSelected{background:var(--danger);}
+  #btnDeselectAll{background:var(--navy-2);}
+
+  #canvasWrap{flex:1 1 auto;position:relative;background:var(--paper);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;transition: background 0.3s;}
+  #canvasInner{
+    position:relative;width:100%;
+    background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: var(--grid-size) var(--grid-size);
+    background-color: var(--paper);
+    transition: background-color 0.3s;
+  }
+  #inkCanvas{position:absolute;inset:0;}
+  #overlay{position:absolute;inset:0;pointer-events:none;}
+
+  .box{
+    position:absolute;min-width:90px;min-height:60px;border-radius:8px;
+    box-shadow:0 3px 10px rgba(27,36,48,.18);display:flex;flex-direction:column;
+    touch-action:none;pointer-events:auto;
+  }
+  .box.text-box{background:#FFFDF6;border:1px solid var(--grid-line);}
+  
+  .box-head{
+    flex:0 0 auto;height:30px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 8px;cursor:grab;border-top-left-radius:8px;border-top-right-radius:8px;background:rgba(27,36,48,.08);
+  }
+  .box.note-box .box-head{background:rgba(27,36,48,.12);}
+  .box.image-box{background:#eee;padding:0;min-width:70px;min-height:70px;}
+  .box.image-box .box-head{
+    opacity:0;pointer-events:none;transition:opacity .15s;position:absolute;top:-34px;left:0;right:0;height:32px;
+    z-index:10;background:var(--navy);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);padding:0 8px;
+  }
+  .box.image-box.selected .box-head{opacity:1;pointer-events:auto;}
+  .box.image-box .drag-dots{color:#fff;font-size:12px;}
+  
+  .box-btns{display:flex;gap:8px;align-items:center;}
+  .box-confirm-btn{width:24px;height:24px;border-radius:6px;background:#3a9d5c;color:#fff;font-size:14px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .box-confirm-btn.confirmed{background:#7a8a9e;}
+  .crop-toggle{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .crop-toggle.on{background:var(--amber);color:var(--navy);}
+  .crop-confirm-btn{width:24px;height:24px;border-radius:6px;background:#3a9d5c;color:#fff;font-size:14px;font-weight:bold;display:none;align-items:center;justify-content:center;cursor:pointer;}
+  .box.image-box.crop-mode .crop-confirm-btn{display:flex;}
+  .box-x{width:24px;height:24px;border-radius:50%;background:rgba(178,58,72,.85);color:#fff;font-size:15px;font-weight:bold;line-height:24px;text-align:center;cursor:pointer;}
+  
+  .corner-handle{position:absolute;width:22px;height:22px;background:var(--amber);border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4);display:none;z-index:12;}
+  .box.image-box.selected .corner-handle{display:block;}
+  .corner-handle.nw{left:-11px;top:-11px;cursor:nwse-resize;}
+  .corner-handle.ne{right:-11px;top:-11px;cursor:nesw-resize;}
+  .corner-handle.sw{left:-11px;bottom:-11px;cursor:nesw-resize;}
+  .corner-handle.se{right:-11px;bottom:-11px;cursor:nwse-resize;}
+
+  .img-frame{position:relative;flex:1 1 auto;overflow:hidden;border-radius:8px;background:#dcdfe4;touch-action:none;height:100%;width:100%;}
+  .img-frame img{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;-webkit-user-drag:none;user-select:none;}
+  .box.image-box.crop-mode .img-frame{outline:3px solid var(--amber);outline-offset:-3px;}
+
+  .box-body{flex:1 1 auto;padding:8px 10px;font-size:14px;line-height:1.35;overflow:hidden;outline:none;user-select:text;-webkit-user-select:text;white-space:pre-wrap;word-break:break-word;}
+  .box.locked .box-body{contenteditable:false;user-select:none;}
+  .resize-handle{position:absolute;right:2px;bottom:2px;width:18px;height:18px;cursor:nwse-resize;opacity:.6;}
+
+  #toast{
+    position:absolute;left:50%;bottom:14px;transform:translate(-50%,10px);
+    background:var(--navy);color:#fff;font-family:'Space Mono',monospace;font-size:11px;
+    padding:6px 14px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;z-index:50;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0);}
+
+  #dimEditor{
+    position:fixed;z-index:70;display:none;background:var(--navy);border:1px solid #364252;
+    border-radius:12px;padding:8px 12px;box-shadow:0 8px 24px rgba(0,0,0,0.5);color:#fff;gap:8px;align-items:center;
+  }
+  #dimEditor.show{display:flex;}
+  #dimEditor input{width:90px;background:var(--navy-2);border:1px solid #364252;color:var(--amber);font-size:15px;font-weight:700;padding:6px 8px;border-radius:6px;outline:none;text-align:center;}
+  #dimEditor button{background:var(--amber);color:var(--navy);border:none;border-radius:6px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;}
+
+  .page-divider{position:absolute;left:0;right:0;height:1px;border-top:2px dashed #C7CDD6;pointer-events:none;}
+  .page-divider span{position:absolute;right:10px;top:-19px;font-family:'Space Mono',monospace;font-size:10px;color:#8b93a1;background:var(--paper);padding:0 6px;}
+  #pageNav{
+    position:fixed;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:45;
+    background:var(--navy);color:#fff;border-radius:20px;padding:6px;display:flex;align-items:center;gap:4px;
+    box-shadow:0 6px 16px rgba(0,0,0,.32);font-family:'Space Mono',monospace;font-size:11px;
+  }
+  #pageNav button{background:var(--navy-2);border:none;color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
+  #pageLabel{padding:0 4px;min-width:34px;text-align:center;}
+
+  #undoBtn{position:relative;}
+  #undoBtn:disabled{opacity:.35;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<!-- Şifre Kilit Ekranı Modal -->
+<div id="lockOverlay">
+  <div class="lock-card">
+    <div class="lock-title">🔒 UYGULAMA KİLİTLİ</div>
+    <input type="password" id="passInput" class="lock-input" maxlength="6" placeholder="******" autofocus>
+    <button id="unlockBtn" class="lock-btn">Giriş Yap</button>
+  </div>
+</div>
+
+<div id="app">
+
+  <header>
+    <button class="day-nav-btn" id="prevDay">‹</button>
+    <div class="date-block" id="dateBlock">
+      <div class="weekday" id="weekdayLabel">—</div>
+      <div class="full-date" id="fullDateLabel">—</div>
+    </div>
+    <button class="today-btn" id="todayBtn">BUGÜN</button>
+    <button class="day-nav-btn" id="nextDay">›</button>
+    <button class="cal-toggle" id="calToggle" title="Takvim">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1B2430" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+    </button>
+
+    <div id="calPopover">
+      <div class="cal-head">
+        <button id="calPrevMonth">‹</button>
+        <span id="calMonthLabel">—</span>
+        <button id="calNextMonth">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </header>
+
+  <div id="toolbar">
+    <button class="tool-btn active" data-tool="pen" title="Serbest Kalem">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l3.6-.9L18.5 8.2a2 2 0 0 0 0-2.8l-1.9-1.9a2 2 0 0 0-2.8 0L1.9 15.4 3 21z"/><path d="M13 5.5l3.5 3.5"/></svg>
+      Kalem
+    </button>
+
+    <div class="color-btn-wrap">
+      <button class="tool-btn" id="cadDrawBtn" title="Çizim Araçları">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="5" r="1.5"/></svg>
+        Çizim ▾
+      </button>
+      <div class="tool-popover" id="cadDrawPopover">
+        <button class="draw-opt" data-cadtool="select">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
+          Çizgi Seç / Sil (İmleç)
+        </button>
+        <button class="draw-opt" data-cadtool="line">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+          Çizgi (Line)
+        </button>
+        <button class="draw-opt" data-cadtool="mdf18">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><rect x="3" y="8" width="18" height="8" rx="1"/></svg>
+          18mm MDF Çizgi (Kilitli 90°)
+        </button>
+        <button class="draw-opt" data-cadtool="dimension">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="3" y2="18"/><line x1="21" y1="6" x2="21" y2="18"/></svg>
+          Ölçülendirme (Dimension)
+        </button>
+        <button class="draw-opt" data-cadtool="polyline">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 19 9 8 14 14 20 5"/></svg>
+          Çoklu Çizgi (Polyline)
+        </button>
+        <button class="draw-opt" data-cadtool="rect">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
+          Dikdörtgen
+        </button>
+      </div>
+    </div>
+
+    <div class="color-btn-wrap">
+      <button class="tool-btn" id="snapMenuBtn" title="Ortho ve Snap Ayarları">
+        ⟂ Ortho & Snap ▾
+      </button>
+      <div id="snapMenuPanel">
+        <div class="snap-item on" id="toggleOrthoRow">
+          <span>Yatay/Dikey Kilit (Ortho)</span>
+          <span id="orthoStatusText">✓</span>
+        </div>
+        <div style="height:1px;background:var(--grid-line);margin:4px 0;"></div>
+        <div class="snap-item on" data-key="endpoint">Uç Nokta (Endpoint) ✓</div>
+        <div class="snap-item on" data-key="midpoint">Orta Nokta (Midpoint) ✓</div>
+        <div class="snap-item on" data-key="tracking">AutoCAD Hizalama (Tracking 90°) ✓</div>
+      </div>
+    </div>
+
+    <!-- Görünüm & Tema Düzenleyici Menü (Dişli Çark) -->
+    <div class="color-btn-wrap">
+      <button class="tool-btn" id="viewSettingsBtn" title="Görünüm ve Tema">
+        ⚙️ Görünüm ▾
+      </button>
+      <div id="viewSettingsPopover">
+        <div class="pop-title">Sayfa Renk Teması</div>
+        <div class="theme-grid">
+          <div class="theme-chip active" data-theme="" style="background:#F7F5EF;color:#1B2430">Varsayılan</div>
+          <div class="theme-chip" data-theme="theme-light-grey" style="background:#E9ECEF;color:#212529">Açık Gri</div>
+          <div class="theme-chip" data-theme="theme-sepia" style="background:#F4ECD8;color:#4A3B32">Sepya</div>
+          <div class="theme-chip" data-theme="theme-cream" style="background:#FFFDD0;color:#333">Krem</div>
+          <div class="theme-chip" data-theme="theme-pale-blue" style="background:#E8F1F5;color:#1C2D37">Açık Mavi</div>
+          <div class="theme-chip" data-theme="theme-pale-green" style="background:#EAF2E8;color:#1F331C">Açık Yeşil</div>
+        </div>
+        
+        <div style="height:1px;background:var(--grid-line);margin:4px 0;"></div>
+        
+        <div class="pop-title">Izgara Kare Boyutu</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="range" id="gridSizeSlider" min="15" max="50" value="26" style="flex:1">
+          <span id="gridSizeLabel" style="font-size:12px;font-weight:bold;width:32px">26px</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="color-btn-wrap">
+      <div class="color-btn" id="penColorBtn" style="background:#1B2430" title="Renk"></div>
+      <div class="color-popover" id="penColorPop">
+        <div class="swatch active" style="background:#1B2430" data-color="#1B2430"></div>
+        <div class="swatch" style="background:#2B4C7E" data-color="#2B4C7E"></div>
+        <div class="swatch" style="background:#B23A48" data-color="#B23A48"></div>
+        <div class="swatch" style="background:#E8A33D" data-color="#E8A33D"></div>
+      </div>
+    </div>
+
+    <button class="tool-btn" data-tool="eraser" title="Noktasal Silgi">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13l-8 8H5l-2-2 11-11 6 6-2 2z"/><path d="M13 6l5 5"/></svg>
+    </button>
+    <button class="tool-btn" data-tool="pan" title="Kaydır">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
+    </button>
+
+    <button class="tool-btn" id="undoBtn" title="Geri Al" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
+    </button>
+    
+    <div class="tool-sep"></div>
+
+    <button class="tool-btn" data-tool="note" title="Not Kutusu">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
+    </button>
+
+    <div class="color-btn-wrap">
+      <div class="color-btn" id="noteColorBtn" style="background:#FFD966" title="Not Rengi"></div>
+      <div class="color-popover" id="noteColorPop">
+        <div class="swatch active" style="background:#FFD966" data-color="#FFD966"></div>
+        <div class="swatch" style="background:#A8D8B9" data-color="#A8D8B9"></div>
+        <div class="swatch" style="background:#A9CCE3" data-color="#A9CCE3"></div>
+        <div class="swatch" style="background:#F2B5A0" data-color="#F2B5A0"></div>
+        <div class="swatch" style="background:#C9B6E4" data-color="#C9B6E4"></div>
+      </div>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <button class="tool-btn" id="photoBtn" title="Fotoğraf ekle">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/></svg>
+    </button>
+    <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+
+    <div class="tool-sep"></div>
+
+    <!-- Dışa Aktarma Araçları -->
+    <button class="tool-btn" id="exportBtn" title="Excel Dışa Aktar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+      Excel
+    </button>
+    <button class="tool-btn" id="exportPdfBtn" title="PDF Dışa Aktar">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      PDF
+    </button>
+    <button class="tool-btn danger" id="clearDayBtn" title="Günü Temizle">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+    </button>
+  </div>
+
+  <div id="canvasWrap">
+    <div id="canvasInner">
+      <canvas id="inkCanvas"></canvas>
+      <div id="overlay"></div>
+    </div>
+    <div id="toast"></div>
+  </div>
+
+  <div id="polyBar">
+    <button id="polyDone">✓ Çizimi Bitir</button>
+    <button id="polyCancel">✕ İptal</button>
+  </div>
+
+  <div id="selectBar">
+    <button id="btnCopySelected">📋 Kopyala & Yapıştır</button>
+    <button id="btnDeleteSelected">🗑 Seçilenleri Sil</button>
+    <button id="btnDeselectAll">✕ İptal</button>
+  </div>
+
+  <div id="pageNav">
+    <button id="pagePrev" title="Önceki Sayfa">▲</button>
+    <span id="pageLabel">1/1</span>
+    <button id="pageNext" title="Sonraki Sayfa">▼</button>
+  </div>
+
+</div>
+
+<div id="dimEditor">
+  <span>Yeni Ölçü (px):</span>
+  <input type="number" id="dimValueInput" step="any">
+  <button id="dimApplyBtn">Tamam</button>
+</div>
+
+<script>
+// --- FIREBASE KURULUMU ---
+const firebaseConfig = {
+  apiKey: "AIzaSyCFKton3snkeqQYELSuiy5e5TaxLGkjMD0",
+  authDomain: "cad-notlar.firebaseapp.com",
+  databaseURL: "https://cad-notlar-default-rtdb.firebaseio.com",
+  projectId: "cad-notlar",
+  storageBucket: "cad-notlar.firebasestorage.app",
+  messagingSenderId: "21454455978",
+  appId: "1:21454455978:web:ba1680b94ff8539179bcd3",
+  measurementId: "G-LVS4NSKPTT"
+
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// --- ŞİFRE KORUMASI ---
+const MASTER_PIN = "156155"; // Giriş şifrenizi buradan değiştirebilirsiniz
+const lockOverlay = document.getElementById("lockOverlay");
+const passInput = document.getElementById("passInput");
+const unlockBtn = document.getElementById("unlockBtn");
+
+unlockBtn.onclick = checkPass;
+passInput.onkeyup = (e) => { if(e.key === "Enter") checkPass(); };
+
+function checkPass(){
+  if(passInput.value === MASTER_PIN){
+    lockOverlay.classList.add("unlocked");
+    showToast("Giriş Başarılı");
+  } else {
+    alert("Hatalı Şifre!");
+    passInput.value = "";
+  }
+}
+
+(function(){
+  "use strict";
+
+  const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  const AYLAR_KISA = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
+  const GUNLER = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  const GUNLER_KISA = ["Pz","Pt","Sa","Ça","Pe","Cu","Ct"];
+
+  function pad(n){return n<10?"0"+n:""+n;}
+  function keyOf(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+  
+  function formatCustomDate(d){
+    const dayNum = d.getDate();
+    const monthStr = AYLAR_KISA[d.getMonth()];
+    const dayStr = GUNLER_KISA[d.getDay()];
+    const yearStr = String(d.getFullYear()).slice(-2);
+    return `${dayNum} ${monthStr} ${dayStr} ${yearStr}`;
+  }
+
+  function sameDay(a,b){return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();}
+  function uid(){return Math.random().toString(36).slice(2,9);}
+  const STORAGE_PREFIX = "gnd_";
+
+  let current = new Date();
+  let calViewDate = new Date(current);
+  let day = {ink:[], texts:[], notes:[], images:[]};
+  let tool = "pen"; 
+  let penColor = "#1B2430";
+  let noteColor = "#FFD966";
+  let saveTimer = null;
+  let contentHeight = 0;
+
+  let orthoEnabled = true;
+  let snapSettings = { endpoint: true, midpoint: true, tracking: true };
+  let previewItem = null;
+  let lineStart = null;
+  let polyPts = null;
+  let activeSnapMarker = null;
+  let activeTrackingLines = [];
+
+  let undoStack = [];
+  const UNDO_LIMIT = 30;
+  function pushUndoSnapshot(){
+    try{
+      undoStack.push(JSON.stringify(day.ink));
+      if(undoStack.length > UNDO_LIMIT) undoStack.shift();
+      updateUndoBtn();
+    }catch(e){ }
+  }
+  function updateUndoBtn(){
+    document.getElementById("undoBtn").disabled = undoStack.length === 0;
+  }
+
+  const weekdayLabel = document.getElementById("weekdayLabel");
+  const fullDateLabel = document.getElementById("fullDateLabel");
+  const canvas = document.getElementById("inkCanvas");
+  const ctx = canvas.getContext("2d");
+  const overlay = document.getElementById("overlay");
+  const wrap = document.getElementById("canvasWrap");
+  const canvasInner = document.getElementById("canvasInner");
+  const toast = document.getElementById("toast");
+  const dimEditor = document.getElementById("dimEditor");
+  const dimValueInput = document.getElementById("dimValueInput");
+  let activeEditLine = null;
+
+  function loadDay(d){
+    const dayKey = keyOf(d);
+    // 1. Önce yerel depolamadan yükle
+    const raw = localStorage.getItem(STORAGE_PREFIX + dayKey);
+    if(raw){
+      try{ day = JSON.parse(raw); }catch(e){ day = {ink:[],texts:[],notes:[],images:[]}; }
+    } else {
+      day = {ink:[], texts:[], notes:[], images:[]};
+    }
+    if(!day.ink) day.ink=[];
+    if(!day.texts) day.texts=[];
+    if(!day.notes) day.notes=[];
+    if(!day.images) day.images=[];
+    if(!day.pageCount) day.pageCount = 1;
+    day.ink.forEach(it=>{ if(!it.id) it.id = uid(); });
+    undoStack = [];
+    updateUndoBtn();
+
+    // 2. Buluttan (Firebase) canlı dinle
+    db.ref('cad_notes/' + dayKey).on('value', (snapshot) => {
+      const cloudData = snapshot.val();
+      if(cloudData){
+        day = cloudData;
+        renderAll();
+      }
+    });
+  }
+
+  function saveDayNow(){
+    day.ink.forEach(it=>{ if(it.selected) it.selected = false; });
+    const dayKey = keyOf(current);
+    localStorage.setItem(STORAGE_PREFIX + dayKey, JSON.stringify(day));
+    
+    // Bulut Veritabanına Anlık Senkronize Et
+    db.ref('cad_notes/' + dayKey).set(day);
+    showToast("Buluta Senkronize Edildi ☁️");
+  }
+
+  function saveDaySoon(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveDayNow, 450);
+  }
+  let toastTimer=null;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>toast.classList.remove("show"), 900);
+  }
+
+  function renderHeader(){
+    weekdayLabel.textContent = GUNLER[current.getDay()];
+    fullDateLabel.textContent = current.getDate()+" "+AYLAR[current.getMonth()]+" "+current.getFullYear();
+  }
+  document.getElementById("prevDay").onclick = ()=>changeDate(-1);
+  document.getElementById("nextDay").onclick = ()=>changeDate(1);
+  document.getElementById("todayBtn").onclick = ()=>{ goToDate(new Date()); };
+
+  function changeDate(delta){
+    const d = new Date(current);
+    d.setDate(d.getDate()+delta);
+    goToDate(d);
+  }
+  function goToDate(d){
+    saveDayNow();
+    current = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    calViewDate = new Date(current);
+    loadDay(current);
+    renderHeader();
+    renderAll();
+    wrap.scrollTop = 0;
+    renderCalendar();
+  }
+
+  const calPop = document.getElementById("calPopover");
+  const calGrid = document.getElementById("calGrid");
+  const calMonthLabel = document.getElementById("calMonthLabel");
+
+  document.getElementById("calToggle").onclick = ()=>{
+    calPop.classList.toggle("open");
+    if(calPop.classList.contains("open")) renderCalendar();
+  };
+  document.getElementById("dateBlock").onclick = ()=>{
+    calPop.classList.toggle("open");
+    if(calPop.classList.contains("open")) renderCalendar();
+  };
+  document.getElementById("calPrevMonth").onclick = (e)=>{e.stopPropagation();calViewDate.setMonth(calViewDate.getMonth()-1);renderCalendar();};
+  document.getElementById("calNextMonth").onclick = (e)=>{e.stopPropagation();calViewDate.setMonth(calViewDate.getMonth()+1);renderCalendar();};
+
+  function renderCalendar(){
+    calMonthLabel.textContent = AYLAR[calViewDate.getMonth()]+" "+calViewDate.getFullYear();
+    calGrid.innerHTML = "";
+    GUNLER_KISA.forEach(g=>{
+      const el = document.createElement("div");
+      el.className="cal-dow"; el.textContent=g;
+      calGrid.appendChild(el);
+    });
+    const first = new Date(calViewDate.getFullYear(), calViewDate.getMonth(), 1);
+    const startOffset = first.getDay();
+    const gridStart = new Date(first);
+    gridStart.setDate(gridStart.getDate()-startOffset);
+    const today = new Date();
+    for(let i=0;i<42;i++){
+      const d = new Date(gridStart);
+      d.setDate(gridStart.getDate()+i);
+      const el = document.createElement("div");
+      el.className = "cal-day" + (d.getMonth()!==calViewDate.getMonth()?" other":"");
+      if(sameDay(d,today)) el.classList.add("today");
+      if(sameDay(d,current)) el.classList.add("selected");
+      el.textContent = d.getDate();
+      if(hasContent(d)){
+        const dot = document.createElement("div");
+        dot.className="dot";
+        el.appendChild(dot);
+      }
+      el.addEventListener("click", (()=>{ const dd=new Date(d); return ()=>{ goToDate(dd); calPop.classList.remove("open"); }; })());
+      calGrid.appendChild(el);
+    }
+  }
+  function hasContent(d){
+    if(sameDay(d,current)){
+      return (day.ink&&day.ink.length) || (day.texts&&day.texts.length) || (day.notes&&day.notes.length) || (day.images&&day.images.length);
+    }
+    const raw = localStorage.getItem(STORAGE_PREFIX + keyOf(d));
+    if(!raw) return false;
+    try{
+      const p = JSON.parse(raw);
+      return (p.ink&&p.ink.length) || (p.texts&&p.texts.length) || (p.notes&&p.notes.length) || (p.images&&p.images.length);
+    }catch(e){ return false; }
+  }
+
+  const cadDrawBtn = document.getElementById("cadDrawBtn");
+  const cadDrawPop = document.getElementById("cadDrawPopover");
+  const snapMenuBtn = document.getElementById("snapMenuBtn");
+  const snapMenuPanel = document.getElementById("snapMenuPanel");
+  const viewSettingsBtn = document.getElementById("viewSettingsBtn");
+  const viewSettingsPopover = document.getElementById("viewSettingsPopover");
+
+  viewSettingsBtn.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    viewSettingsPopover.classList.toggle("open");
+    if(viewSettingsPopover.classList.contains("open")){
+      const r = viewSettingsBtn.getBoundingClientRect();
+      viewSettingsPopover.style.left = Math.max(6, Math.min(r.left, window.innerWidth-250))+"px";
+      viewSettingsPopover.style.top = (r.bottom+6)+"px";
+    }
+  });
+
+  viewSettingsPopover.querySelectorAll(".theme-chip").forEach(chip => {
+    chip.addEventListener("click", ()=>{
+      viewSettingsPopover.querySelectorAll(".theme-chip").forEach(c=>c.classList.remove("active"));
+      chip.classList.add("active");
+      document.body.className = chip.dataset.theme;
+      redrawInk();
+    });
+  });
+
+  const gridSizeSlider = document.getElementById("gridSizeSlider");
+  const gridSizeLabel = document.getElementById("gridSizeLabel");
+  gridSizeSlider.addEventListener("input", (e)=>{
+    const val = e.target.value;
+    gridSizeLabel.textContent = val + "px";
+    document.documentElement.style.setProperty('--grid-size', val + "px");
+  });
+
+  snapMenuBtn.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    snapMenuPanel.classList.toggle("open");
+    if(snapMenuPanel.classList.contains("open")){
+      const r = snapMenuBtn.getBoundingClientRect();
+      snapMenuPanel.style.left = Math.max(6, Math.min(r.left, window.innerWidth-220))+"px";
+      snapMenuPanel.style.top = (r.bottom+6)+"px";
+    }
+  });
+
+  document.getElementById("toggleOrthoRow").addEventListener("click", (e)=>{
+    e.stopPropagation();
+    orthoEnabled = !orthoEnabled;
+    document.getElementById("toggleOrthoRow").classList.toggle("on", orthoEnabled);
+    document.getElementById("orthoStatusText").textContent = orthoEnabled ? "✓" : "";
+    showToast(orthoEnabled ? "Ortho Açık" : "Ortho Kapalı");
+  });
+
+  snapMenuPanel.querySelectorAll("[data-key]").forEach(item=>{
+    item.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const k = item.dataset.key;
+      snapSettings[k] = !snapSettings[k];
+      item.classList.toggle("on", snapSettings[k]);
+      item.textContent = item.textContent.replace(" ✓","") + (snapSettings[k] ? " ✓" : "");
+    });
+  });
+
+  function selectTool(name){
+    if(tool==="polyline" && name!=="polyline" && polyPts){
+      polyPts = null; previewItem = null; redrawInk();
+      document.getElementById("polyBar").classList.remove("show");
+    }
+    if(tool==="select" && name!=="select"){
+      day.ink.forEach(it=>it.selected=false);
+      document.getElementById("selectBar").classList.remove("show");
+    }
+    tool = name;
+    document.querySelectorAll(".tool-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".draw-opt").forEach(b=>b.classList.remove("active"));
+    
+    if(["line","mdf18","dimension","polyline","rect","select"].includes(name)){
+      cadDrawBtn.classList.add("active");
+      const activeOpt = cadDrawPop.querySelector(`[data-cadtool="${name}"]`);
+      if(activeOpt) activeOpt.classList.add("active");
+      redrawInk();
+    } else {
+      const btn = document.querySelector(`.tool-btn[data-tool="${name}"]`);
+      if(btn) btn.classList.add("active");
+      day.ink.forEach(it=>it.selected=false);
+      updateSelectBar();
+      redrawInk();
+    }
+
+    canvas.style.touchAction = ["pen","eraser","line","mdf18","dimension","rect","polyline","select"].includes(name) ? "none" : "pan-y";
+  }
+
+  document.querySelectorAll(".tool-btn[data-tool]").forEach(btn=>{
+    btn.addEventListener("click", ()=>selectTool(btn.dataset.tool));
+  });
+
+  cadDrawBtn.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    cadDrawPop.classList.toggle("open");
+    if(cadDrawPop.classList.contains("open")){
+      const r = cadDrawBtn.getBoundingClientRect();
+      cadDrawPop.style.left = Math.max(6, Math.min(r.left, window.innerWidth-220))+"px";
+      cadDrawPop.style.top = (r.bottom+6)+"px";
+    }
+  });
+
+  cadDrawPop.querySelectorAll("[data-cadtool]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      selectTool(btn.dataset.cadtool);
+      cadDrawPop.classList.remove("open");
+    });
+  });
+
+  function wireColorPopover(btnId, popId, onPick){
+    const btn = document.getElementById(btnId);
+    const pop = document.getElementById(popId);
+    btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      pop.classList.toggle("open");
+      if(pop.classList.contains("open")){
+        const r = btn.getBoundingClientRect();
+        pop.style.left = Math.max(6, Math.min(r.left - 50, window.innerWidth-150))+"px";
+        pop.style.top = (r.bottom+6)+"px";
+      }
+    });
+    pop.addEventListener("click",(e)=>{
+      const sw = e.target.closest(".swatch"); if(!sw) return;
+      pop.querySelectorAll(".swatch").forEach(s=>s.classList.remove("active"));
+      sw.classList.add("active");
+      btn.style.background = sw.dataset.color;
+      onPick(sw.dataset.color);
+      pop.classList.remove("open");
+    });
+  }
+  wireColorPopover("penColorBtn","penColorPop",(c)=>{ penColor = c; });
+  wireColorPopover("noteColorBtn","noteColorPop",(c)=>{ noteColor = c; });
+
+  document.addEventListener("click",(e)=>{
+    if(!e.target.closest("#cadDrawPopover") && !e.target.closest("#cadDrawBtn")) cadDrawPop.classList.remove("open");
+    if(!e.target.closest("#snapMenuPanel") && !e.target.closest("#snapMenuBtn")) snapMenuPanel.classList.remove("open");
+    if(!e.target.closest("#viewSettingsPopover") && !e.target.closest("#viewSettingsBtn")) viewSettingsPopover.classList.remove("open");
+    if(!e.target.closest(".color-btn-wrap")) document.querySelectorAll(".color-popover.open").forEach(p=>p.classList.remove("open"));
+  });
+
+  document.getElementById("clearDayBtn").addEventListener("click", ()=>{
+    if(confirm("Bu günün tüm notlarını ve çizimlerini silmek istediğine emin misin?")){
+      pushUndoSnapshot();
+      day = {ink:[], texts:[], notes:[], images:[]};
+      renderAll();
+      saveDayNow();
+      renderCalendar();
+    }
+  });
+
+  const PAGE_RATIO = 1.41421356;
+  const PAGE_GAP = 18;
+  function pageHeightPx(){ return wrap.clientWidth * PAGE_RATIO; }
+
+  function applyPages(n){
+    day.pageCount = Math.max(1, n);
+    const ph = pageHeightPx();
+    contentHeight = day.pageCount*ph + (day.pageCount-1)*PAGE_GAP;
+    canvasInner.style.height = contentHeight+"px";
+    resizeCanvas();
+    renderPageDividers();
+    updatePageLabel();
+  }
+  function renderPageDividers(){
+    canvasInner.querySelectorAll(".page-divider").forEach(el=>el.remove());
+    const ph = pageHeightPx();
+    for(let i=1;i<day.pageCount;i++){
+      const y = i*ph + (i-1)*PAGE_GAP + PAGE_GAP/2;
+      const div = document.createElement("div");
+      div.className = "page-divider";
+      div.style.top = (y-1)+"px";
+      div.innerHTML = "<span>Sayfa "+(i+1)+"</span>";
+      canvasInner.appendChild(div);
+    }
+  }
+  function resizeCanvas(){
+    const w = wrap.clientWidth;
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = w*ratio;
+    canvas.height = contentHeight*ratio;
+    canvas.style.width = w+"px";
+    canvas.style.height = contentHeight+"px";
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+    redrawInk();
+  }
+  window.addEventListener("resize", ()=>applyPages(day.pageCount||1));
+
+  function currentPageIndex(){
+    const ph = pageHeightPx();
+    return Math.min(day.pageCount-1, Math.max(0, Math.round(wrap.scrollTop/(ph+PAGE_GAP))));
+  }
+  function scrollToPage(n){
+    const ph = pageHeightPx();
+    wrap.scrollTo({top: n*(ph+PAGE_GAP), behavior:"smooth"});
+  }
+  function updatePageLabel(){
+    document.getElementById("pageLabel").textContent = (currentPageIndex()+1)+"/"+day.pageCount;
+  }
+  document.getElementById("pagePrev").addEventListener("click", ()=>scrollToPage(Math.max(0, currentPageIndex()-1)));
+  document.getElementById("pageNext").addEventListener("click", ()=>{
+    const idx = currentPageIndex();
+    if(idx+1 >= day.pageCount){ applyPages(day.pageCount+1); saveDaySoon(); }
+    scrollToPage(idx+1);
+  });
+
+  let pageAddLock = false;
+  wrap.addEventListener("scroll", ()=>{
+    if(!pageAddLock && wrap.scrollTop + wrap.clientHeight > contentHeight - 200){
+      pageAddLock = true;
+      applyPages(day.pageCount+1);
+      saveDaySoon();
+      setTimeout(()=>{ pageAddLock = false; }, 400);
+    }
+    updatePageLabel();
+  });
+
+  function findSnapPoint(pt, currentStart){
+    const tol = 24;
+    let best=null, bestD=tol, type=null;
+    activeTrackingLines = [];
+
+    day.ink.forEach(item=>{
+      if(item.type!=="path" || !item.pts) return;
+      const pts = item.pts;
+      if(snapSettings.endpoint){
+        pts.forEach(p=>{
+          const d = Math.hypot(p[0]-pt[0], p[1]-pt[1]);
+          if(d<bestD){ bestD=d; best=p; type="endpoint"; }
+        });
+      }
+      if(snapSettings.midpoint && pts.length>=2){
+        for(let i=0;i<pts.length-1;i++){
+          const mid = [(pts[i][0]+pts[i+1][0])/2, (pts[i][1]+pts[i+1][1])/2];
+          const d = Math.hypot(mid[0]-pt[0], mid[1]-pt[1]);
+          if(d<bestD){ bestD=d; best=mid; type="midpoint"; }
+        }
+      }
+    });
+
+    if(polyPts && polyPts.length > 0){
+      polyPts.forEach(p=>{
+        const d = Math.hypot(p[0]-pt[0], p[1]-pt[1]);
+        if(d<bestD){ bestD=d; best=p; type="endpoint"; }
+      });
+    }
+
+    if(best) return {pt: best, type};
+
+    if(snapSettings.tracking){
+      let trackedPt = null;
+
+      day.ink.forEach(item=>{
+        if(trackedPt || item.type!=="path" || !item.pts) return;
+        item.pts.forEach(p=>{
+          if(Math.abs(pt[0] - p[0]) < 20){
+            trackedPt = [p[0], pt[1]];
+            activeTrackingLines.push({ from: p, to: trackedPt });
+          }
+          if(Math.abs(pt[1] - p[1]) < 20){
+            if(trackedPt){
+              trackedPt[1] = p[1];
+            } else {
+              trackedPt = [pt[0], p[1]];
+            }
+            activeTrackingLines.push({ from: p, to: trackedPt });
+          }
+        });
+      });
+
+      if(trackedPt) return {pt: trackedPt, type: "tracking90"};
+    }
+
+    return null;
+  }
+
+  function snapPoint(pt, currentStart){
+    const s = findSnapPoint(pt, currentStart);
+    if(s){ activeSnapMarker = s; return [s.pt[0], s.pt[1]]; }
+    activeSnapMarker = null;
+    return pt;
+  }
+
+  function applyOrthoStrict(start, end){
+    const dx = end[0] - start[0];
+    const dy = end[1] - start[1];
+    if(Math.abs(dx) > Math.abs(dy)){
+      return [end[0], start[1]];
+    } else {
+      return [start[0], end[1]];
+    }
+  }
+
+  function applyOrtho(start, end){
+    if(!orthoEnabled) return end;
+    return applyOrthoStrict(start, end);
+  }
+
+  function rectPts(a,b){ return [[a[0],a[1]],[b[0],a[1]],[b[0],b[1]],[a[0],b[1]],[a[0],a[1]]]; }
+
+  function mdfPts(start, end, rawPt){
+    const dx = end[0] - start[0], dy = end[1] - start[1];
+    const len = Math.hypot(dx, dy);
+    if(len < 1) return rectPts(start, end);
+    const mdfThickness = 18;
+    
+    let nx = -dy / len;
+    let ny = dx / len;
+
+    if(rawPt){
+      const v1x = end[0] - start[0], v1y = end[1] - start[1];
+      const v2x = rawPt[0] - start[0], v2y = rawPt[1] - start[1];
+      const crossProduct = v1x * v2y - v1y * v2x;
+      if(crossProduct < 0){
+        nx = -nx;
+        ny = -ny;
+      }
+    }
+
+    const p1 = [start[0], start[1]];
+    const p2 = [end[0], end[1]];
+    const p3 = [end[0] + nx * mdfThickness, end[1] + ny * mdfThickness];
+    const p4 = [start[0] + nx * mdfThickness, start[1] + ny * mdfThickness];
+    return [p1, p2, p3, p4, p1];
+  }
+
+  function redrawInk(){
+    ctx.clearRect(0,0,wrap.clientWidth,contentHeight);
+    day.ink.forEach(item=>{
+      if(item.type==="path") drawPath(item);
+    });
+    if(previewItem){
+      ctx.save();
+      ctx.setLineDash([5,4]);
+      drawPath(previewItem);
+      ctx.restore();
+    }
+    drawTrackingGuides();
+    drawSnapMarker();
+  }
+
+  function drawPath(p){
+    if(!p.pts || p.pts.length<1) return;
+
+    if(p.isDimension){
+      drawAutoCadDimension(p);
+      return;
+    }
+
+    ctx.strokeStyle = p.selected ? "#E8A33D" : (p.color || "#1B2430");
+    ctx.fillStyle = p.isMdf ? "rgba(232, 163, 61, 0.18)" : ctx.strokeStyle;
+    ctx.lineWidth = p.selected ? (p.width || 2.5) + 2 : (p.width || 2.5);
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    if(p.pts.length===1){
+      ctx.beginPath();
+      ctx.arc(p.pts[0][0], p.pts[0][1], (ctx.lineWidth/2)+0.5, 0, Math.PI*2);
+      ctx.fill();
+      return;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(p.pts[0][0], p.pts[0][1]);
+    for(let i=1;i<p.pts.length;i++) ctx.lineTo(p.pts[i][0], p.pts[i][1]);
+    
+    if(p.isMdf){
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.stroke();
+
+    if(p.isCadLine && p.pts.length>=2){
+      for(let i=0;i<p.pts.length-1;i++){
+        if(p.isMdf && i > 0) break;
+        const p1 = p.pts[i], p2 = p.pts[i+1];
+        const len = Math.round(Math.hypot(p2[0]-p1[0], p2[1]-p1[1]));
+        if(len > 3) drawDimensionLabelWithPointer(p1, p2, len);
+      }
+    }
+  }
+
+  function drawAutoCadDimension(dim){
+    const p1 = dim.pts[0], p2 = dim.pts[1];
+    const len = Math.round(Math.hypot(p2[0]-p1[0], p2[1]-p1[1]));
+    if(len < 1) return;
+
+    const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
+    let nx = -Math.sin(ang), ny = Math.cos(ang);
+
+    let offsetDist = dim.offsetDist || 32;
+
+    const dimP1 = [p1[0] + nx * offsetDist, p1[1] + ny * offsetDist];
+    const dimP2 = [p2[0] + nx * offsetDist, p2[1] + ny * offsetDist];
+    const mx = (dimP1[0]+dimP2[0])/2, my = (dimP1[1]+dimP2[1])/2;
+
+    ctx.save();
+    ctx.strokeStyle = dim.selected ? "#E8A33D" : "#2B4C7E";
+    ctx.fillStyle = dim.selected ? "#E8A33D" : "#2B4C7E";
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.moveTo(dimP1[0], dimP1[1]);
+    ctx.lineTo(dimP2[0], dimP2[1]);
+    ctx.stroke();
+
+    const extOver = offsetDist > 0 ? 6 : -6;
+    ctx.beginPath();
+    ctx.moveTo(p1[0], p1[1]);
+    ctx.lineTo(dimP1[0] + nx*extOver, dimP1[1] + ny*extOver);
+    ctx.moveTo(p2[0], p2[1]);
+    ctx.lineTo(dimP2[0] + nx*extOver, dimP2[1] + ny*extOver);
+    ctx.stroke();
+
+    ctx.font = "700 12px Inter, sans-serif";
+    const text = len + " px";
+    const tw = ctx.measureText(text).width;
+
+    ctx.save();
+    ctx.translate(mx, my);
+    let textAng = ang;
+    if (textAng > Math.PI/2 || textAng < -Math.PI/2) textAng += Math.PI;
+    ctx.rotate(textAng);
+
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--paper').trim() || "#F7F5EF";
+    ctx.fillRect(-tw/2 - 4, -18, tw + 8, 14);
+
+    ctx.fillStyle = "#B23A48";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, 0, -11);
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function drawDimensionLabelWithPointer(p1, p2, lenText){
+    const mx = (p1[0]+p2[0])/2, my = (p1[1]+p2[1])/2;
+    const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
+    const nx = -Math.sin(ang), ny = Math.cos(ang);
+    const offsetDist = 28;
+    
+    const labelX = mx + nx * offsetDist;
+    const labelY = my + ny * offsetDist;
+
+    ctx.save();
+    ctx.strokeStyle = "#E8A33D";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(mx, my);
+    ctx.lineTo(labelX, labelY);
+    ctx.stroke();
+
+    ctx.fillStyle = "#E8A33D";
+    ctx.beginPath();
+    ctx.arc(mx, my, 3, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.font = "700 11px Inter, sans-serif";
+    const tw = ctx.measureText(lenText + "px").width;
+    const bw = tw + 14, bh = 20;
+
+    ctx.fillStyle = "rgba(27,36,48,0.95)";
+    ctx.strokeStyle = "#E8A33D";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(labelX - bw/2, labelY - bh/2, bw, bh, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#00FF66";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(lenText + "px", labelX, labelY);
+    ctx.restore();
+  }
+
+  function drawTrackingGuides(){
+    if(!activeTrackingLines || activeTrackingLines.length===0) return;
+    ctx.save();
+    ctx.strokeStyle = "#00FF66";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+
+    activeTrackingLines.forEach(line=>{
+      ctx.beginPath();
+      ctx.moveTo(line.from[0], line.from[1]);
+      ctx.lineTo(line.to[0], line.to[1]);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+
+  function drawSnapMarker(){
+    if(!activeSnapMarker) return;
+    const [x,y] = activeSnapMarker.pt;
+    ctx.save();
+    ctx.strokeStyle = "#00FF66";
+    ctx.fillStyle = "rgba(0, 255, 102, 0.3)";
+    ctx.lineWidth = 2.5;
+
+    if(activeSnapMarker.type==="tracking90"){
+      ctx.fillRect(x-8, y-8, 16, 16);
+      ctx.strokeRect(x-8, y-8, 16, 16);
+      ctx.fillStyle = "#00FF66";
+      ctx.font = "700 10px Inter, sans-serif";
+      ctx.fillText("HİZA (90°)", x+12, y-10);
+    } else if(activeSnapMarker.type==="midpoint"){
+      ctx.beginPath();
+      ctx.moveTo(x, y-9); ctx.lineTo(x-9, y+7); ctx.lineTo(x+9, y+7); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else {
+      ctx.fillRect(x-7, y-7, 14, 14);
+      ctx.strokeRect(x-7, y-7, 14, 14);
+    }
+    ctx.restore();
+  }
+
+  let drawing = false;
+  let currentPath = null;
+
+  function ptFromEvent(e){
+    const rect = canvas.getBoundingClientRect();
+    return [e.clientX-rect.left, e.clientY-rect.top];
+  }
+
+  function pointInPolygon(point, vs) {
+    const x = point[0], y = point[1];
+    let inside = false;
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+      const xi = vs[i][0], yi = vs[i][1];
+      const xj = vs[j][0], yj = vs[j][1];
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  function eraseAtPoint(pt){
+    const r = 16; 
+    let changed = false;
+    let newInkList = [];
+
+    day.ink.forEach(item => {
+      if(item.type !== "path" || !item.pts || item.pts.length === 0){
+        newInkList.push(item);
+        return;
+      }
+
+      if(item.isMdf){
+        let hit = pointInPolygon(pt, item.pts);
+        if(!hit){
+          for(let i=0;i<item.pts.length-1;i++){
+            if(distToSegment(pt, item.pts[i], item.pts[i+1]) < r){
+              hit = true; break;
+            }
+          }
+        }
+        if(hit){
+          changed = true;
+          return;
+        } else {
+          newInkList.push(item);
+          return;
+        }
+      }
+
+      let currentSegment = [];
+      item.pts.forEach(p => {
+        const d = Math.hypot(p[0]-pt[0], p[1]-pt[1]);
+        if(d > r){
+          currentSegment.push(p);
+        } else {
+          changed = true;
+          if(currentSegment.length > 1){
+            newInkList.push(Object.assign({}, item, {id:uid(), pts: currentSegment}));
+          }
+          currentSegment = [];
+        }
+      });
+      if(currentSegment.length > 1){
+        newInkList.push(Object.assign({}, item, {id:uid(), pts: currentSegment}));
+      }
+    });
+
+    if(changed){
+      day.ink = newInkList;
+      redrawInk();
+      saveDaySoon();
+    }
+  }
+
+  canvas.addEventListener("pointerdown",(e)=>{
+    if(!["pen","eraser","line","mdf18","dimension","rect","polyline"].includes(tool)) return;
+    canvas.setPointerCapture(e.pointerId);
+    const pt = ptFromEvent(e);
+
+    if(tool==="pen"){
+      pushUndoSnapshot();
+      drawing = true;
+      currentPath = {id:uid(), type:"path", color:penColor, width: e.pointerType==="pen"?2.5:3, pts:[pt]};
+      day.ink.push(currentPath);
+    } else if(tool==="eraser"){
+      pushUndoSnapshot();
+      drawing = true;
+      eraseAtPoint(pt);
+    } else if(tool==="line"){
+      pushUndoSnapshot();
+      drawing = true;
+      lineStart = snapPoint(pt, null);
+      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:[lineStart, lineStart]};
+      redrawInk();
+    } else if(tool==="mdf18"){
+      pushUndoSnapshot();
+      drawing = true;
+      lineStart = snapPoint(pt, null);
+      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, isMdf:true, pts:mdfPts(lineStart, lineStart, pt)};
+      redrawInk();
+    } else if(tool==="dimension"){
+      pushUndoSnapshot();
+      drawing = true;
+      lineStart = snapPoint(pt, null);
+      previewItem = {id:uid(), type:"path", color:"#2B4C7E", isDimension:true, offsetDist:32, pts:[lineStart, lineStart]};
+      redrawInk();
+    } else if(tool==="rect"){
+      pushUndoSnapshot();
+      drawing = true;
+      lineStart = snapPoint(pt, null);
+      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:rectPts(lineStart, lineStart)};
+      redrawInk();
+    } else if(tool==="polyline"){
+      if(!polyPts) pushUndoSnapshot();
+      const startPt = polyPts && polyPts.length>0 ? polyPts[polyPts.length-1] : null;
+      const p = snapPoint(pt, startPt);
+      if(!polyPts){
+        polyPts = [p];
+        document.getElementById("polyBar").classList.add("show");
+      } else {
+        polyPts.push(p);
+      }
+      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:polyPts.slice()};
+      redrawInk();
+    }
+  });
+
+  canvas.addEventListener("pointermove",(e)=>{
+    const pt = ptFromEvent(e);
+
+    if(!drawing && ["line","mdf18","dimension","polyline","rect"].includes(tool)){
+      const startPt = (tool==="polyline" && polyPts && polyPts.length>0) ? polyPts[polyPts.length-1] : null;
+      snapPoint(pt, startPt);
+      redrawInk();
+      return;
+    }
+
+    if(tool==="polyline" && polyPts){
+      const lastPt = polyPts[polyPts.length-1];
+      let end = snapPoint(pt, lastPt);
+      if(!activeSnapMarker && polyPts.length>0) end = applyOrtho(lastPt, end);
+      const tempPts = polyPts.concat([end]);
+      previewItem = {id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:tempPts};
+      redrawInk();
+      return;
+    }
+
+    if(!drawing) return;
+
+    if(tool==="pen" && currentPath){
+      currentPath.pts.push(pt);
+      redrawInk();
+    } else if(tool==="eraser"){
+      eraseAtPoint(pt);
+    } else if(tool==="line"){
+      let end = snapPoint(pt, lineStart);
+      if(!activeSnapMarker) end = applyOrtho(lineStart, end);
+      previewItem.pts = [lineStart, end];
+      redrawInk();
+    } else if(tool==="mdf18"){
+      let end = snapPoint(pt, lineStart);
+      if(!activeSnapMarker) end = applyOrthoStrict(lineStart, end);
+      previewItem.pts = mdfPts(lineStart, end, pt);
+      redrawInk();
+    } else if(tool==="dimension"){
+      let end = snapPoint(pt, lineStart);
+      if(!activeSnapMarker) end = applyOrtho(lineStart, end);
+      
+      const dx = end[0] - lineStart[0], dy = end[1] - lineStart[1];
+      const len = Math.hypot(dx, dy);
+      if(len > 1){
+        const nx = -dy / len, ny = dx / len;
+        const v2x = pt[0] - lineStart[0], v2y = pt[1] - lineStart[1];
+        const proj = v2x * nx + v2y * ny;
+        previewItem.offsetDist = Math.abs(proj) > 12 ? proj : (proj >= 0 ? 32 : -32);
+      }
+      
+      previewItem.pts = [lineStart, end];
+      redrawInk();
+    } else if(tool==="rect"){
+      const end = snapPoint(pt, lineStart);
+      previewItem.pts = rectPts(lineStart, end);
+      redrawInk();
+    }
+  });
+
+  function endStroke(){
+    if(!drawing) return;
+    drawing=false;
+    if((tool==="line" || tool==="mdf18" || tool==="dimension" || tool==="rect") && previewItem){
+      const pts = previewItem.pts;
+      let maxLen = 0;
+      for(let i=0;i<pts.length-1;i++){
+        maxLen = Math.max(maxLen, Math.hypot(pts[i+1][0]-pts[i][0], pts[i+1][1]-pts[i][1]));
+      }
+      if(maxLen > 3) day.ink.push(previewItem);
+      else if(undoStack.length) undoStack.pop();
+      previewItem = null;
+    }
+    currentPath=null; activeSnapMarker=null; activeTrackingLines=[];
+    updateUndoBtn();
+    saveDaySoon(); redrawInk();
+  }
+  canvas.addEventListener("pointerup", endStroke);
+  canvas.addEventListener("pointercancel", endStroke);
+
+  document.getElementById("polyDone").addEventListener("click", ()=>{
+    if(polyPts && polyPts.length>=2){
+      day.ink.push({id:uid(), type:"path", color:penColor, width:2.2, isCadLine:true, pts:polyPts});
+      saveDaySoon();
+    }
+    polyPts=null; previewItem=null; activeTrackingLines=[]; redrawInk();
+    document.getElementById("polyBar").classList.remove("show");
+  });
+  document.getElementById("polyCancel").addEventListener("click", ()=>{
+    polyPts=null; previewItem=null; activeTrackingLines=[]; redrawInk();
+    document.getElementById("polyBar").classList.remove("show");
+  });
+
+  document.getElementById("undoBtn").addEventListener("click", ()=>{
+    if(!undoStack.length) return;
+    const prev = undoStack.pop();
+    try{ day.ink = JSON.parse(prev); }catch(e){ }
+    day.ink.forEach(it=>{ if(!it.id) it.id = uid(); });
+    updateUndoBtn();
+    redrawInk();
+    saveDaySoon();
+  });
+
+  function distToSegment(p, a, b){
+    const l2 = (b[0]-a[0])**2 + (b[1]-a[1])**2;
+    if(l2 === 0) return Math.hypot(p[0]-a[0], p[1]-a[1]);
+    let t = ((p[0]-a[0])*(b[0]-a[0]) + (p[1]-a[1])*(b[1]-a[1])) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p[0] - (a[0]+t*(b[0]-a[0])), p[1] - (a[1]+t*(b[1]-a[1])));
+  }
+
+  canvas.addEventListener("click",(e)=>{
+    const pt = ptFromEvent(e);
+
+    if(tool==="select"){
+      let found = false;
+      day.ink.forEach(item=>{
+        if(item.type!=="path" || !item.pts) return;
+        for(let i=0;i<item.pts.length-1;i++){
+          if(distToSegment(pt, item.pts[i], item.pts[i+1]) < 14){
+            item.selected = !item.selected;
+            found = true;
+            break;
+          }
+        }
+      });
+      if(found){ updateSelectBar(); redrawInk(); return; }
+    }
+
+    if(!["select","line","mdf18","rect","polyline"].includes(tool)) return;
+
+    let hitFound = false;
+    day.ink.forEach(item=>{
+      if(hitFound || !item.isCadLine || item.pts.length<2) return;
+      
+      const checkLimit = item.isMdf ? 1 : item.pts.length - 1;
+
+      for(let i=0; i<checkLimit; i++){
+        const p1=item.pts[i], p2=item.pts[i+1];
+        const mx=(p1[0]+p2[0])/2, my=(p1[1]+p2[1])/2;
+        const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
+        const nx = -Math.sin(ang), ny = Math.cos(ang);
+        const lx = mx + nx * 28, ly = my + ny * 28;
+
+        if(Math.hypot(pt[0]-lx, pt[1]-ly) < 32 || Math.hypot(pt[0]-mx, pt[1]-my) < 20){
+          hitFound = true;
+          activeEditLine = {item, p1Index:i, p2Index:i+1};
+          dimValueInput.value = Math.round(Math.hypot(p2[0]-p1[0], p2[1]-p1[1]));
+          dimEditor.style.left = Math.min(window.innerWidth-160, Math.max(10, e.clientX-60))+"px";
+          dimEditor.style.top = Math.min(window.innerHeight-80, Math.max(10, e.clientY-40))+"px";
+          dimEditor.classList.add("show");
+          setTimeout(()=>dimValueInput.focus(), 50);
+          break;
+        }
+      }
+    });
+  });
+
+  document.getElementById("dimApplyBtn").addEventListener("click",()=>{
+    if(activeEditLine && activeEditLine.item && activeEditLine.item.pts){
+      const newLen = parseFloat(dimValueInput.value);
+      if(!isNaN(newLen) && newLen>0){
+        pushUndoSnapshot();
+        const item = activeEditLine.item;
+        const pts = item.pts;
+        const p1 = pts[activeEditLine.p1Index];
+        const p2 = pts[activeEditLine.p2Index];
+        const currentLen = Math.hypot(p2[0]-p1[0], p2[1]-p1[1]);
+        if(currentLen > 0){
+          const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]);
+          const cx = (p1[0]+p2[0])/2, cy = (p1[1]+p2[1])/2;
+          const newP1 = [cx - (Math.cos(ang) * newLen / 2), cy - (Math.sin(ang) * newLen / 2)];
+          const newP2 = [cx + (Math.cos(ang) * newLen / 2), cy + (Math.sin(ang) * newLen / 2)];
+
+          if(item.isMdf){
+            item.pts = mdfPts(newP1, newP2, null);
+          } else {
+            p1[0] = newP1[0]; p1[1] = newP1[1];
+            p2[0] = newP2[0]; p2[1] = newP2[1];
+          }
+          redrawInk();
+          saveDaySoon();
+        } else {
+          undoStack.pop();
+        }
+      }
+    }
+    dimEditor.classList.remove("show");
+    activeEditLine = null;
+  });
+
+  function updateSelectBar(){
+    const anySelected = day.ink.some(it=>it.selected);
+    document.getElementById("selectBar").classList.toggle("show", anySelected && tool==="select");
+  }
+
+  document.getElementById("btnCopySelected").addEventListener("click", ()=>{
+    pushUndoSnapshot();
+    const copies = [];
+    day.ink.forEach(it=>{
+      if(it.selected && it.pts){
+        const copiedPts = it.pts.map(p => [p[0] + 30, p[1] + 30]);
+        copies.push(Object.assign({}, it, { id: uid(), pts: copiedPts, selected: true }));
+        it.selected = false;
+      }
+    });
+    day.ink = day.ink.concat(copies);
+    updateSelectBar();
+    redrawInk();
+    saveDaySoon();
+    showToast(copies.length + " Çizgi Kopyalandı");
+  });
+
+  document.getElementById("btnDeleteSelected").addEventListener("click", ()=>{
+    pushUndoSnapshot();
+    day.ink = day.ink.filter(it=>!it.selected);
+    updateSelectBar(); redrawInk(); saveDaySoon();
+  });
+  document.getElementById("btnDeselectAll").addEventListener("click", ()=>{
+    day.ink.forEach(it=>it.selected=false);
+    updateSelectBar(); redrawInk();
+  });
+
+  wrap.addEventListener("click",(e)=>{
+    if(e.target !== canvas) return;
+    if(tool==="note"){
+      const rect = canvasInner.getBoundingClientRect();
+      addNote({x:e.clientX-rect.left-70, y:e.clientY-rect.top-30, w:160, h:120, text:"", color:noteColor, locked:false});
+      saveDaySoon();
+    }
+  });
+
+  function addNote(data){
+    const item = Object.assign({id:uid()}, data);
+    day.notes.push(item);
+    renderBox(item,"note");
+    return item;
+  }
+
+  const NOTE_PALETTE = ["#FFD966","#A8D8B9","#A9CCE3","#F2B5A0","#C9B6E4","#FFFFFF"];
+
+  function renderBox(item, kind){
+    const box = document.createElement("div");
+    box.className = "box " + (kind==="text" ? "text-box" : "note-box");
+    if(item.locked) box.classList.add("locked");
+    box.style.left = item.x+"px"; box.style.top = item.y+"px";
+    box.style.width = item.w+"px"; box.style.height = item.h+"px";
+    if(kind==="note") box.style.background = item.color;
+
+    const head = document.createElement("div");
+    head.className = "box-head";
+    const dots = document.createElement("div");
+    dots.className = "drag-dots"; dots.textContent = "⣿";
+    const btns = document.createElement("div");
+    btns.className = "box-btns";
+
+    const confirmBtn = document.createElement("div");
+    confirmBtn.className = "box-confirm-btn" + (item.locked ? " confirmed" : "");
+    confirmBtn.textContent = "✓";
+    confirmBtn.title = item.locked ? "Düzenle" : "Metni Onayla";
+    confirmBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+    confirmBtn.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      item.locked = !item.locked;
+      box.classList.toggle("locked", item.locked);
+      body.contentEditable = item.locked ? "false" : "true";
+      confirmBtn.classList.toggle("confirmed", item.locked);
+      if(item.locked) body.blur();
+      else body.focus();
+      saveDaySoon();
+    });
+    btns.appendChild(confirmBtn);
+
+    if(kind==="note"){
+      const cdot = document.createElement("div");
+      cdot.className = "color-dot"; cdot.style.background = item.color;
+      cdot.style.width = "18px"; cdot.style.height = "18px"; cdot.style.borderRadius = "50%";
+      cdot.addEventListener("pointerdown", (e) => e.stopPropagation());
+      cdot.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        let idx = NOTE_PALETTE.indexOf(item.color);
+        item.color = NOTE_PALETTE[(idx+1)%NOTE_PALETTE.length];
+        box.style.background = item.color; cdot.style.background = item.color;
+        saveDaySoon();
+      });
+      btns.appendChild(cdot);
+    }
+    const xBtn = document.createElement("div");
+    xBtn.className = "box-x"; xBtn.textContent = "×";
+    xBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+    xBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const arr = kind==="text" ? day.texts : day.notes;
+      const idx = arr.findIndex(it=>it.id===item.id);
+      if(idx>-1) arr.splice(idx,1);
+      box.remove(); saveDaySoon();
+    });
+    btns.appendChild(xBtn); head.appendChild(dots); head.appendChild(btns);
+
+    const body = document.createElement("div");
+    body.className = "box-body"; body.contentEditable = item.locked ? "false" : "true";
+    body.textContent = item.text || "";
+    body.addEventListener("input", ()=>{ item.text = body.innerText; saveDaySoon(); });
+    body.addEventListener("pointerdown",(e)=> e.stopPropagation());
+
+    const resize = document.createElement("div");
+    resize.className = "resize-handle";
+    resize.innerHTML = '<svg viewBox="0 0 16 16"><path d="M14 2 2 14M14 8 8 14M14 14 14 14" stroke="#1B2430" stroke-width="1.5"/></svg>';
+
+    box.appendChild(head); box.appendChild(body); box.appendChild(resize);
+    overlay.appendChild(box);
+
+    let dragging=false, dragOX=0, dragOY=0;
+    head.addEventListener("pointerdown",(e)=>{
+      dragging=true; head.setPointerCapture(e.pointerId);
+      const r = box.getBoundingClientRect();
+      dragOX = e.clientX-r.left; dragOY = e.clientY-r.top;
+    });
+    head.addEventListener("pointermove",(e)=>{
+      if(!dragging) return;
+      const innerRect = canvasInner.getBoundingClientRect();
+      let nx = e.clientX - innerRect.left - dragOX;
+      let ny = e.clientY - innerRect.top - dragOY;
+      box.style.left = nx+"px"; box.style.top = ny+"px";
+      item.x = nx; item.y = ny;
+    });
+    head.addEventListener("pointerup",()=>{ if(dragging){dragging=false; saveDaySoon();} });
+
+    let resizing=false, startW=0, startH=0, startX=0, startY=0;
+    resize.addEventListener("pointerdown",(e)=>{
+      e.stopPropagation(); resizing=true; resize.setPointerCapture(e.pointerId);
+      startW = box.offsetWidth; startH = box.offsetHeight;
+      startX = e.clientX; startY = e.clientY;
+    });
+    resize.addEventListener("pointermove",(e)=>{
+      if(!resizing) return;
+      item.w = Math.max(90, startW + (e.clientX-startX));
+      item.h = Math.max(60, startH + (e.clientY-startY));
+      box.style.width = item.w+"px"; box.style.height = item.h+"px";
+    });
+    resize.addEventListener("pointerup",()=>{ if(resizing){resizing=false; saveDaySoon();} });
+  }
+
+  document.getElementById("photoBtn").addEventListener("click", ()=>document.getElementById("photoInput").click());
+  document.getElementById("photoInput").addEventListener("change",(e)=>{
+    Array.from(e.target.files||[]).forEach((f,idx)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> addImageFromDataUrl(reader.result, idx);
+      reader.readAsDataURL(f);
+    });
+    e.target.value = "";
+  });
+
+  function addImageFromDataUrl(dataUrl, cascadeIdx){
+    const tmp = new Image();
+    tmp.onload = ()=>{
+      const w = 150, h = 150;
+      const coverScale = Math.max(w/tmp.naturalWidth, h/tmp.naturalHeight);
+      const cascade = (cascadeIdx||0)*16;
+      const item = {
+        id:uid(), x: Math.max(8, wrap.clientWidth/2 - 75 + cascade),
+        y: wrap.scrollTop + 40 + cascade, w, h, dataUrl,
+        naturalW:tmp.naturalWidth, naturalH:tmp.naturalHeight, scale:coverScale,
+        panX:(w-tmp.naturalWidth*coverScale)/2, panY:(h-tmp.naturalHeight*coverScale)/2
+      };
+      day.images.push(item);
+      renderImageBox(item);
+      saveDaySoon();
+    };
+    tmp.src = dataUrl;
+  }
+
+  function renderImageBox(item){
+    const box = document.createElement("div");
+    box.className = "box image-box";
+    box.style.left = item.x+"px"; box.style.top = item.y+"px";
+    box.style.width = item.w+"px"; box.style.height = item.h+"px";
+
+    const head = document.createElement("div");
+    head.className = "box-head";
+    const dots = document.createElement("div");
+    dots.className = "drag-dots"; dots.textContent = "⣿ TAŞI";
+    const btns = document.createElement("div");
+    btns.className = "box-btns";
+
+    const cropBtn = document.createElement("div");
+    cropBtn.className = "crop-toggle"; cropBtn.textContent = "⤢";
+    cropBtn.title = "Kırp";
+    cropBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+
+    const cropConfirmBtn = document.createElement("div");
+    cropConfirmBtn.className = "crop-confirm-btn"; cropConfirmBtn.textContent = "✓";
+    cropConfirmBtn.title = "Kırpmayı Onayla";
+    cropConfirmBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+
+    const xBtn = document.createElement("div");
+    xBtn.className = "box-x"; xBtn.textContent = "×";
+    xBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+    xBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const idx = day.images.findIndex(it=>it.id===item.id);
+      if(idx>-1) day.images.splice(idx,1);
+      box.remove(); saveDaySoon();
+    });
+
+    btns.appendChild(cropBtn);
+    btns.appendChild(cropConfirmBtn);
+    btns.appendChild(xBtn);
+    head.appendChild(dots); head.appendChild(btns);
+
+    const frame = document.createElement("div");
+    frame.className = "img-frame";
+    const img = document.createElement("img");
+    img.src = item.dataUrl; img.draggable = false;
+    frame.appendChild(img);
+
+    box.appendChild(head); box.appendChild(frame);
+
+    ["nw","ne","sw","se"].forEach(dir=>{
+      const h = document.createElement("div");
+      h.className = "corner-handle "+dir;
+      box.appendChild(h);
+      attachCornerResize(dir, h, item, box, img);
+    });
+
+    overlay.appendChild(box);
+
+    function applyImgTransform(){
+      img.style.width = item.naturalW+"px"; img.style.height = item.naturalH+"px";
+      img.style.transform = `translate(${item.panX}px,${item.panY}px) scale(${item.scale})`;
+    }
+    applyImgTransform();
+
+    frame.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      document.querySelectorAll(".box.image-box.selected").forEach(b=>{ if(b!==box) b.classList.remove("selected","crop-mode"); });
+      box.classList.add("selected");
+    });
+
+    let cropMode = false;
+    cropBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      cropMode = !cropMode;
+      cropBtn.classList.toggle("on", cropMode);
+      box.classList.toggle("crop-mode", cropMode);
+    });
+
+    cropConfirmBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      cropMode = false;
+      cropBtn.classList.remove("on");
+      box.classList.remove("crop-mode");
+      saveDaySoon();
+    });
+
+    let dragging=false, startCX=0, startCY=0, startBX=0, startBY=0, startPX=0, startPY=0;
+    function dragStart(e, el){
+      dragging = true; el.setPointerCapture(e.pointerId);
+      startCX = e.clientX; startCY = e.clientY;
+      startBX = item.x; startBY = item.y;
+      startPX = item.panX; startPY = item.panY;
+    }
+    function dragMove(e){
+      if(!dragging) return;
+      const dx = e.clientX-startCX, dy = e.clientY-startCY;
+      if(cropMode){
+        item.panX = Math.min(0, Math.max(startPX+dx, item.w-item.naturalW*item.scale));
+        item.panY = Math.min(0, Math.max(startPY+dy, item.h-item.naturalH*item.scale));
+        applyImgTransform();
+      } else {
+        item.x = Math.max(0, startBX+dx); item.y = Math.max(0, startBY+dy);
+        box.style.left = item.x+"px"; box.style.top = item.y+"px";
+      }
+    }
+    function dragEnd(){ if(dragging){ dragging=false; saveDaySoon(); } }
+
+    head.addEventListener("pointerdown",(e)=>dragStart(e,head));
+    head.addEventListener("pointermove",dragMove);
+    head.addEventListener("pointerup",dragEnd);
+    frame.addEventListener("pointerdown",(e)=>dragStart(e,frame));
+    frame.addEventListener("pointermove",dragMove);
+    frame.addEventListener("pointerup",dragEnd);
+  }
+
+  function attachCornerResize(dir, handle, item, box, img){
+    let resizing=false, startW=0, startH=0, startX0=0, startY0=0, rStartX=0, rStartY=0;
+    handle.addEventListener("pointerdown",(e)=>{
+      e.stopPropagation(); resizing=true; handle.setPointerCapture(e.pointerId);
+      startW = item.w; startH = item.h; startX0 = item.x; startY0 = item.y;
+      rStartX = e.clientX; rStartY = e.clientY;
+    });
+    handle.addEventListener("pointermove",(e)=>{
+      if(!resizing) return;
+      const dx = e.clientX-rStartX, dy = e.clientY-rStartY;
+      let nw=startW, nh=startH, nx=startX0, ny=startY0;
+
+      if(dir==="se"){ nw=startW+dx; nh=startH+dy; }
+      else if(dir==="sw"){ nw=startW-dx; nh=startH+dy; nx=startX0+dx; }
+      else if(dir==="ne"){ nw=startW+dx; nh=startH-dy; ny=startY0+dy; }
+      else if(dir==="nw"){ nw=startW-dx; nh=startH-dy; nx=startX0+dx; ny=startY0+dy; }
+
+      item.w = Math.max(60, nw); item.h = Math.max(60, nh);
+      item.x = nx; item.y = ny;
+      box.style.width = item.w+"px"; box.style.height = item.h+"px";
+      box.style.left = item.x+"px"; box.style.top = item.y+"px";
+
+      const coverScale = Math.max(item.w/item.naturalW, item.h/item.naturalH);
+      if(item.scale < coverScale) item.scale = coverScale;
+      img.style.width = item.naturalW+"px"; img.style.height = item.naturalH+"px";
+      img.style.transform = `translate(${item.panX}px,${item.panY}px) scale(${item.scale})`;
+    });
+    handle.addEventListener("pointerup",()=>{ if(resizing){ resizing=false; saveDaySoon(); } });
+  }
+
+  document.addEventListener("click",(e)=>{
+    if(!e.target.closest(".image-box")){
+      document.querySelectorAll(".box.image-box.selected").forEach(b=>b.classList.remove("selected","crop-mode"));
+    }
+  });
+
+  function exportAll(){
+    const rows = [["Tarih","Açıklama"]];
+    const dateKeys = Object.keys(localStorage).filter(k=>k.indexOf(STORAGE_PREFIX)===0).map(k=>k.slice(STORAGE_PREFIX.length)).sort();
+    dateKeys.forEach(dk=>{
+      const raw = localStorage.getItem(STORAGE_PREFIX+dk);
+      let parsed; try{ parsed = JSON.parse(raw); }catch(e){ parsed = null; }
+      if(!parsed) return;
+      const parts = [];
+      (parsed.texts||[]).forEach(t=>{ if(t.text && t.text.trim()) parts.push(t.text.trim()); });
+      (parsed.notes||[]).forEach(n=>{ if(n.text && n.text.trim()) parts.push(n.text.trim()); });
+      if(parts.length===0) return;
+      
+      const dParts = dk.split("-");
+      const dObj = new Date(parseInt(dParts[0]), parseInt(dParts[1])-1, parseInt(dParts[2]));
+      const formattedDateStr = formatCustomDate(dObj);
+
+      rows.push([formattedDateStr, parts.join("\n---\n")]);
+    });
+    if(rows.length===1){ showToast("Aktarılacak metin yok"); return; }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Notlar");
+    XLSX.writeFile(wb, `gunluk-notlarim-${formatCustomDate(current)}.xlsx`);
+    showToast("Excel Olarak Aktarıldı");
+  }
+  document.getElementById("exportBtn").addEventListener("click", exportAll);
+
+  function exportPdf(){
+    showToast("PDF Hazırlanıyor...");
+    const element = document.getElementById("canvasInner");
+    
+    html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: getComputedStyle(document.body).getPropertyValue('--paper').trim() || "#F7F5EF"
+    }).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`cizim-notlarim-${formatCustomDate(current)}.pdf`);
+      showToast("PDF Aktarıldı");
+    }).catch(err=>{
+      showToast("PDF Hata Oluştu");
+    });
+  }
+  document.getElementById("exportPdfBtn").addEventListener("click", exportPdf);
+
+  function renderAll(){
+    overlay.innerHTML = "";
+    applyPages(day.pageCount || 1);
+    day.texts.forEach(t=>renderBox(t,"text"));
+    day.notes.forEach(n=>renderBox(n,"note"));
+    day.images.forEach(im=>renderImageBox(im));
+  }
+
+  window.addEventListener("beforeunload", saveDayNow);
+  loadDay(current);
+  renderHeader();
+  renderAll();
+  renderCalendar();
+
+  // PWA Service Worker Kaydı
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+
+})();
+</script>
+</body>
+</html>
