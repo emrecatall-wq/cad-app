@@ -92,9 +92,9 @@
   .date-block{flex:1 1 auto;display:flex;flex-direction:column;line-height:1.05;min-width:0;cursor:pointer;}
   .date-block .weekday{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);}
   .date-block .full-date{font-family:'Space Mono',monospace;font-weight:700;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .cal-toggle{flex:0 0 auto;background:var(--amber);color:var(--navy);border:none;width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .cal-toggle{flex:0 0 auto;background:var(--amber);color:var(--navy);border:none;width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;}
   .cal-toggle svg{width:19px;height:19px;}
-  .today-btn{flex:0 0 auto;background:var(--navy-2);border:1px solid #364252;color:#cfd6e0;font-family:'Space Mono',monospace;font-size:11px;padding:0 10px;height:34px;border-radius:8px;cursor:pointer;}
+  .today-btn{flex:0 0 auto;background:var(--navy-2);border:1px solid #364252;color:#cfd6e0;font-family:'Space Mono',monospace;font-size:11px;padding:0 10px;height:34px;border-radius:8px;}
 
   #calPopover{
     position:absolute;top:100%;right:12px;margin-top:6px;width:272px;background:var(--navy-2);
@@ -102,10 +102,10 @@
   }
   #calPopover.open{display:block;}
   .cal-head{display:flex;align-items:center;justify-content:space-between;color:#fff;font-family:'Space Mono',monospace;font-size:13px;margin-bottom:8px;}
-  .cal-head button{background:none;border:none;color:var(--amber);font-size:16px;padding:4px 8px;cursor:pointer;}
+  .cal-head button{background:none;border:none;color:var(--amber);font-size:16px;padding:4px 8px;}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
   .cal-dow{font-family:'Space Mono',monospace;font-size:9px;color:#8593a6;text-align:center;padding:3px 0;}
-  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#dfe4ea;border-radius:7px;position:relative;cursor:pointer;}
+  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#dfe4ea;border-radius:7px;position:relative;}
   .cal-day.other{color:#4a5568;}
   .cal-day.today{outline:1px solid var(--amber);}
   .cal-day.selected{background:var(--amber);color:var(--navy);font-weight:700;}
@@ -124,7 +124,7 @@
   .tool-btn svg{width:19px;height:19px;stroke:var(--navy);}
   .tool-btn.active{border-color:var(--navy);background:#EFE9DA;}
   .tool-sep{width:1px;align-self:stretch;background:var(--grid-line);flex:0 0 auto;margin:0 2px;}
-  .swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--grid-line);flex:0 0 auto;cursor:pointer;}
+  .swatch{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--grid-line);flex:0 0 auto;}
   .swatch.active{box-shadow:0 0 0 2px var(--navy);}
   .tool-btn.danger svg{stroke:var(--danger);}
   .color-btn-wrap{position:relative;flex:0 0 auto;}
@@ -192,8 +192,8 @@
     background-color: var(--paper);
     transition: background-color 0.3s;
   }
-  #inkCanvas{position:absolute;inset:0;}
-  #overlay{position:absolute;inset:0;pointer-events:none;}
+  #inkCanvas{position:absolute;inset:0;z-index:5;touch-action:none;}
+  #overlay{position:absolute;inset:0;pointer-events:none;z-index:10;}
 
   .box{
     position:absolute;min-width:140px;min-height:90px;border-radius:8px;
@@ -258,9 +258,6 @@
 
   #undoBtn{position:relative;}
   #undoBtn:disabled{opacity:.35;pointer-events:none;}
-  
-  .drag-dots { font-size: 11px; color: #666; user-select: none; }
-  .color-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; box-shadow: 0 0 0 1px #ddd; }
 </style>
 </head>
 <body>
@@ -787,7 +784,13 @@ function checkPass(){
       redrawInk();
     }
 
-    canvas.style.touchAction = ["pen","eraser","line","mdf18","dimension","rect","polyline","select"].includes(name) ? "none" : "pan-y";
+    if (["pen","eraser","line","mdf18","dimension","rect","polyline","select"].includes(name)) {
+      canvas.style.pointerEvents = "auto";
+      canvas.style.touchAction = "none";
+    } else {
+      canvas.style.pointerEvents = "none";
+      canvas.style.touchAction = "pan-y";
+    }
   }
 
   document.querySelectorAll(".tool-btn[data-tool]").forEach(btn=>{
@@ -1081,23 +1084,6 @@ function checkPass(){
         if(len > 3) drawDimensionLabelWithPointer(p1, p2, len);
       }
     }
-  }
-
-  // roundRect polyfill for older browsers
-  if (!CanvasRenderingContext2D.prototype.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
-      const r = typeof radii === 'number' ? radii : (radii || 0);
-      this.moveTo(x + r, y);
-      this.lineTo(x + w - r, y);
-      this.quadraticCurveTo(x + w, y, x + w, y + r);
-      this.lineTo(x + w, y + h - r);
-      this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      this.lineTo(x + r, y + h);
-      this.quadraticCurveTo(x, y + h, x, y + h - r);
-      this.lineTo(x, y + r);
-      this.quadraticCurveTo(x, y, x + r, y);
-      return this;
-    };
   }
 
   function drawAutoCadDimension(dim){
@@ -1639,6 +1625,7 @@ function checkPass(){
     if(kind==="note"){
       const cdot = document.createElement("div");
       cdot.className = "color-dot"; cdot.style.background = item.color;
+      cdot.style.width = "18px"; cdot.style.height = "18px"; cdot.style.borderRadius = "50%";
       cdot.addEventListener("click",(e)=>{
         e.stopPropagation();
         let idx = NOTE_PALETTE.indexOf(item.color);
@@ -1760,9 +1747,7 @@ function checkPass(){
 
     const head = document.createElement("div");
     head.className = "box-head";
-    const dots = document.createElement("div");
-    dots.className = "drag-dots"; dots.textContent = "⣿ TAŞI";
-    head.appendChild(dots);
+    head.innerHTML = '<div class="drag-dots">⣿ TAŞI</div>';
 
     const btns = document.createElement("div");
     btns.className = "box-btns";
