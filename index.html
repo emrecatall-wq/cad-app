@@ -486,19 +486,19 @@
 <script>
 // --- FIREBASE KURULUMU (Eksiksiz Tanımlı) ---
 const firebaseConfig = {
-  apiKey: "AIzaSyD-exampleKeyForFirebase12345",
+  apiKey: "AIzaSyD-cad-notlarim-api-key-12345",
   authDomain: "cad-notlarim.firebaseapp.com",
   databaseURL: "https://cad-notlarim-default-rtdb.firebaseio.com",
   projectId: "cad-notlarim",
   storageBucket: "cad-notlarim.appspot.com",
   messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abc123def456ghi789"
+  appId: "1:123456789012:web:cadnotlarimapp123"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // --- ŞİFRE KORUMASI ---
-const MASTER_PIN = "1234"; 
+const MASTER_PIN = "156155"; 
 const lockOverlay = document.getElementById("lockOverlay");
 const passInput = document.getElementById("passInput");
 const unlockBtn = document.getElementById("unlockBtn");
@@ -519,7 +519,7 @@ function checkPass(){
 (function(){
   "use strict";
 
-  const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylul","Ekim","Kasım","Aralık"];
+  const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
   const AYLAR_KISA = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
   const GUNLER = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
   const GUNLER_KISA = ["Pz","Pt","Sa","Ça","Pe","Cu","Ct"];
@@ -901,7 +901,7 @@ function checkPass(){
 
   function currentPageIndex(){
     const ph = pageHeightPx();
-    return Math.min(day.pageCount-1, Math.max(0, Math.round(wrap.scrollTop/(ph+PAGE_GAP))));
+    return Math.min(day.pageCount-1, Math.round(wrap.scrollTop/(ph+PAGE_GAP)));
   }
   function scrollToPage(n){
     const ph = pageHeightPx();
