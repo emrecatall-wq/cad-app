@@ -198,51 +198,38 @@
   .box{
     position:absolute;min-width:140px;min-height:90px;border-radius:8px;
     box-shadow:0 3px 10px rgba(27,36,48,.18);display:flex;flex-direction:column;
-    touch-action:none;pointer-events:auto;z-index:2;
+    touch-action:none;pointer-events:auto;z-index:10;
   }
   .box.text-box{background:#FFFDF6;border:1px solid var(--grid-line);}
   
   .box-head{
-    flex:0 0 auto;height:30px;display:flex;align-items:center;justify-content:space-between;
-    padding:0 8px;cursor:grab;border-top-left-radius:8px;border-top-right-radius:8px;background:rgba(27,36,48,.08);
+    flex:0 0 auto;height:32px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 8px;cursor:grab;border-top-left-radius:8px;border-top-right-radius:8px;background:rgba(27,36,48,.12);
+    touch-action:none;
   }
-  .box.note-box .box-head{background:rgba(27,36,48,.12);}
-  .box.image-box{background:#eee;padding:0;min-width:80px;min-height:80px;}
+  .box.image-box{background:#fff;padding:0;min-width:100px;min-height:100px;border:1px solid #ccc;}
   .box.image-box .box-head{
-    opacity:0;pointer-events:none;transition:opacity .15s;position:absolute;top:-34px;left:0;right:0;height:32px;
-    z-index:10;background:var(--navy);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);padding:0 8px;
+    background:var(--navy);color:#fff;border-radius:6px 6px 0 0;
   }
-  .box.image-box.selected .box-head{opacity:1;pointer-events:auto;}
-  .box.image-box .drag-dots{color:#fff;font-size:12px;}
   
   .box-btns{display:flex;gap:8px;align-items:center;}
   .box-confirm-btn{width:24px;height:24px;border-radius:6px;background:#3a9d5c;color:#fff;font-size:14px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .box-confirm-btn.confirmed{background:#7a8a9e;}
-  .crop-toggle{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.2);color:#fff;font-size:13px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-  .crop-toggle.on{background:var(--amber);color:var(--navy);}
-  .crop-confirm-btn{width:24px;height:24px;border-radius:6px;background:#3a9d5c;color:#fff;font-size:14px;font-weight:bold;display:none;align-items:center;justify-content:center;cursor:pointer;}
-  .box.image-box.crop-mode .crop-confirm-btn{display:flex;}
   .box-x{width:24px;height:24px;border-radius:50%;background:rgba(178,58,72,.85);color:#fff;font-size:15px;font-weight:bold;line-height:24px;text-align:center;cursor:pointer;}
   
-  .corner-handle{position:absolute;width:22px;height:22px;background:var(--amber);border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4);display:none;z-index:12;}
-  .box.image-box.selected .corner-handle{display:block;}
-  .corner-handle.nw{left:-11px;top:-11px;cursor:nwse-resize;}
-  .corner-handle.ne{right:-11px;top:-11px;cursor:nesw-resize;}
-  .corner-handle.sw{left:-11px;bottom:-11px;cursor:nesw-resize;}
-  .corner-handle.se{right:-11px;bottom:-11px;cursor:nwse-resize;}
+  .corner-handle{position:absolute;width:24px;height:24px;background:var(--amber);border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:15;touch-action:none;}
+  .corner-handle.se{right:-12px;bottom:-12px;cursor:nwse-resize;}
 
-  .img-frame{position:relative;flex:1 1 auto;overflow:hidden;border-radius:8px;background:#dcdfe4;touch-action:none;height:100%;width:100%;}
-  .img-frame img{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none;-webkit-user-drag:none;user-select:none;}
-  .box.image-box.crop-mode .img-frame{outline:3px solid var(--amber);outline-offset:-3px;}
+  .img-frame{position:relative;flex:1 1 auto;overflow:hidden;border-radius:0 0 8px 8px;background:#eee;touch-action:none;height:calc(100% - 32px);width:100%;}
+  .img-frame img{width:100%;height:100%;object-fit:contain;pointer-events:none;-webkit-user-drag:none;user-select:none;}
 
-  /* Mobil Klavye Ve Sesli Yazma Uyumlu Not Kutusu */
   .box-body{
     flex:1 1 auto;padding:8px 10px;font-size:14px;line-height:1.35;overflow-y:auto;outline:none;
     user-select:text;-webkit-user-select:text;white-space:pre-wrap;word-break:break-word;
     color: var(--text-dark); background: transparent; border: none; width: 100%; height: 100%; resize: none;
   }
   .box.locked .box-body{user-select:none;-webkit-user-select:none;}
-  .resize-handle{position:absolute;right:2px;bottom:2px;width:18px;height:18px;cursor:nwse-resize;opacity:.6;}
+  .resize-handle{position:absolute;right:2px;bottom:2px;width:20px;height:20px;cursor:nwse-resize;opacity:.7;touch-action:none;}
 
   #toast{
     position:absolute;left:50%;bottom:14px;transform:translate(-50%,10px);
@@ -484,7 +471,7 @@
 </div>
 
 <script>
-// --- FIREBASE KURULUMU (Eksiksiz Tanımlı) ---
+// --- FIREBASE KURULUMU ---
 const firebaseConfig = {
   apiKey: "AIzaSyD-cad-notlarim-api-key-12345",
   authDomain: "cad-notlarim.firebaseapp.com",
@@ -1608,7 +1595,7 @@ function checkPass(){
     const head = document.createElement("div");
     head.className = "box-head";
     const dots = document.createElement("div");
-    dots.className = "drag-dots"; dots.textContent = "⣿";
+    dots.className = "drag-dots"; dots.textContent = "⣿ TAŞI";
     const btns = document.createElement("div");
     btns.className = "box-btns";
 
@@ -1701,6 +1688,7 @@ function checkPass(){
     resize.addEventListener("pointerup",()=>{ if(resizing){resizing=false; saveDaySoon();} });
   }
 
+  // --- RESİM YÜKLEME VE İŞLEME SİSTEMİ ---
   document.getElementById("photoBtn").addEventListener("click", ()=>document.getElementById("photoInput").click());
   document.getElementById("photoInput").addEventListener("change",(e)=>{
     const files = Array.from(e.target.files||[]);
@@ -1723,7 +1711,14 @@ function checkPass(){
           c2d.drawImage(img, 0, 0, w, h);
           const resizedDataUrl = cvs.toDataURL('image/jpeg', 0.8);
 
-          addImageFromDataUrl(resizedDataUrl, idx, w, h);
+          addImageBox({
+            id: uid(),
+            x: Math.max(10, wrap.clientWidth/2 - 100 + (idx*15)),
+            y: wrap.scrollTop + 50 + (idx*15),
+            w: 220,
+            h: 180,
+            dataUrl: resizedDataUrl
+          });
         };
         img.src = evt.target.result;
       };
@@ -1732,16 +1727,7 @@ function checkPass(){
     e.target.value = "";
   });
 
-  function addImageFromDataUrl(dataUrl, cascadeIdx, naturalW, naturalH){
-    const w = 180, h = 180;
-    const coverScale = Math.max(w/naturalW, h/naturalH);
-    const cascade = (cascadeIdx||0)*16;
-    const item = {
-      id:uid(), x: Math.max(8, wrap.clientWidth/2 - 90 + cascade),
-      y: wrap.scrollTop + 40 + cascade, w, h, dataUrl,
-      naturalW, naturalH, scale:coverScale,
-      panX:(w-naturalW*coverScale)/2, panY:(h-naturalH*coverScale)/2
-    };
+  function addImageBox(item){
     day.images.push(item);
     renderImageBox(item);
     saveDaySoon();
@@ -1755,18 +1741,10 @@ function checkPass(){
 
     const head = document.createElement("div");
     head.className = "box-head";
-    const dots = document.createElement("div");
-    dots.className = "drag-dots"; dots.textContent = "⣿ TAŞI";
+    head.innerHTML = '<div class="drag-dots">⣿ TAŞI</div>';
+
     const btns = document.createElement("div");
     btns.className = "box-btns";
-
-    const cropBtn = document.createElement("div");
-    cropBtn.className = "crop-toggle"; cropBtn.textContent = "⤢";
-    cropBtn.title = "Kırp";
-
-    const cropConfirmBtn = document.createElement("div");
-    cropConfirmBtn.className = "crop-confirm-btn"; cropConfirmBtn.textContent = "✓";
-    cropConfirmBtn.title = "Kırpmayı Onayla";
 
     const xBtn = document.createElement("div");
     xBtn.className = "box-x"; xBtn.textContent = "×";
@@ -1777,120 +1755,55 @@ function checkPass(){
       box.remove(); saveDaySoon();
     });
 
-    btns.appendChild(cropBtn);
-    btns.appendChild(cropConfirmBtn);
     btns.appendChild(xBtn);
-    head.appendChild(dots); head.appendChild(btns);
+    head.appendChild(btns);
 
     const frame = document.createElement("div");
     frame.className = "img-frame";
     const img = document.createElement("img");
-    img.src = item.dataUrl; img.draggable = false;
+    img.src = item.dataUrl;
     frame.appendChild(img);
 
-    box.appendChild(head); box.appendChild(frame);
+    const handle = document.createElement("div");
+    handle.className = "corner-handle se";
 
-    ["nw","ne","sw","se"].forEach(dir=>{
-      const h = document.createElement("div");
-      h.className = "corner-handle "+dir;
-      box.appendChild(h);
-      attachCornerResize(dir, h, item, box, img);
-    });
-
+    box.appendChild(head);
+    box.appendChild(frame);
+    box.appendChild(handle);
     overlay.appendChild(box);
 
-    function applyImgTransform(){
-      img.style.width = item.naturalW+"px"; img.style.height = item.naturalH+"px";
-      img.style.transform = `translate(${item.panX}px,${item.panY}px) scale(${item.scale})`;
-    }
-    applyImgTransform();
-
-    frame.addEventListener("click",(e)=>{
-      e.stopPropagation();
-      document.querySelectorAll(".box.image-box.selected").forEach(b=>{ if(b!==box) b.classList.remove("selected","crop-mode"); });
-      box.classList.add("selected");
+    // Taşımak için Sürükleme
+    let dragging=false, dragOX=0, dragOY=0;
+    head.addEventListener("pointerdown",(e)=>{
+      dragging=true; head.setPointerCapture(e.pointerId);
+      const r = box.getBoundingClientRect();
+      dragOX = e.clientX-r.left; dragOY = e.clientY-r.top;
     });
-
-    let cropMode = false;
-    cropBtn.addEventListener("click",(e)=>{
-      e.stopPropagation();
-      cropMode = !cropMode;
-      cropBtn.classList.toggle("on", cropMode);
-      box.classList.toggle("crop-mode", cropMode);
-    });
-
-    cropConfirmBtn.addEventListener("click",(e)=>{
-      e.stopPropagation();
-      cropMode = false;
-      cropBtn.classList.remove("on");
-      box.classList.remove("crop-mode");
-      saveDaySoon();
-    });
-
-    let dragging=false, startCX=0, startCY=0, startBX=0, startBY=0, startPX=0, startPY=0;
-    function dragStart(e, el){
-      dragging = true; el.setPointerCapture(e.pointerId);
-      startCX = e.clientX; startCY = e.clientY;
-      startBX = item.x; startBY = item.y;
-      startPX = item.panX; startPY = item.panY;
-    }
-    function dragMove(e){
+    head.addEventListener("pointermove",(e)=>{
       if(!dragging) return;
-      const dx = e.clientX-startCX, dy = e.clientY-startCY;
-      if(cropMode){
-        item.panX = Math.min(0, Math.max(startPX+dx, item.w-item.naturalW*item.scale));
-        item.panY = Math.min(0, Math.max(startPY+dy, item.h-item.naturalH*item.scale));
-        applyImgTransform();
-      } else {
-        item.x = Math.max(0, startBX+dx); item.y = Math.max(0, startBY+dy);
-        box.style.left = item.x+"px"; box.style.top = item.y+"px";
-      }
-    }
-    function dragEnd(){ if(dragging){ dragging=false; saveDaySoon(); } }
+      const innerRect = canvasInner.getBoundingClientRect();
+      let nx = e.clientX - innerRect.left - dragOX;
+      let ny = e.clientY - innerRect.top - dragOY;
+      box.style.left = nx+"px"; box.style.top = ny+"px";
+      item.x = nx; item.y = ny;
+    });
+    head.addEventListener("pointerup",()=>{ if(dragging){ dragging=false; saveDaySoon(); } });
 
-    head.addEventListener("pointerdown",(e)=>dragStart(e,head));
-    head.addEventListener("pointermove",dragMove);
-    head.addEventListener("pointerup",dragEnd);
-    frame.addEventListener("pointerdown",(e)=>dragStart(e,frame));
-    frame.addEventListener("pointermove",dragMove);
-    frame.addEventListener("pointerup",dragEnd);
-  }
-
-  function attachCornerResize(dir, handle, item, box, img){
-    let resizing=false, startW=0, startH=0, startX0=0, startY0=0, rStartX=0, rStartY=0;
+    // Yeniden Boyutlandırma
+    let resizing=false, startW=0, startH=0, startX=0, startY=0;
     handle.addEventListener("pointerdown",(e)=>{
       e.stopPropagation(); resizing=true; handle.setPointerCapture(e.pointerId);
-      startW = item.w; startH = item.h; startX0 = item.x; startY0 = item.y;
-      rStartX = e.clientX; rStartY = e.clientY;
+      startW = item.w; startH = item.h;
+      startX = e.clientX; startY = e.clientY;
     });
     handle.addEventListener("pointermove",(e)=>{
       if(!resizing) return;
-      const dx = e.clientX-rStartX, dy = e.clientY-rStartY;
-      let nw=startW, nh=startH, nx=startX0, ny=startY0;
-
-      if(dir==="se"){ nw=startW+dx; nh=startH+dy; }
-      else if(dir==="sw"){ nw=startW-dx; nh=startH+dy; nx=startX0+dx; }
-      else if(dir==="ne"){ nw=startW+dx; nh=startH-dy; ny=startY0+dy; }
-      else if(dir==="nw"){ nw=startW-dx; nh=startH-dy; nx=startX0+dx; ny=startY0+dy; }
-
-      item.w = Math.max(60, nw); item.h = Math.max(60, nh);
-      item.x = nx; item.y = ny;
+      item.w = Math.max(100, startW + (e.clientX-startX));
+      item.h = Math.max(100, startH + (e.clientY-startY));
       box.style.width = item.w+"px"; box.style.height = item.h+"px";
-      box.style.left = item.x+"px"; box.style.top = item.y+"px";
-
-      const coverScale = Math.max(item.w/item.naturalW, item.h/item.naturalH);
-      if(item.scale < coverScale) item.scale = coverScale;
-      img.style.width = item.naturalW+"px"; img.style.height = item.naturalH+"px";
-      img.style.transform = `translate(${item.panX}px,${item.panY}px) scale(${item.scale})`;
     });
     handle.addEventListener("pointerup",()=>{ if(resizing){ resizing=false; saveDaySoon(); } });
   }
-
-  document.addEventListener("click",(e)=>{
-    if(!e.target.closest(".image-box")){
-      document.querySelectorAll(".box.image-box.selected").forEach(b=>b.classList.remove("selected","crop-mode"));
-    }
-  });
 
   function exportAll(){
     const rows = [["Tarih","Açıklama"]];
