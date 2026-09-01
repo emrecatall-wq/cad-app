@@ -3,1007 +3,1650 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#1e293b">
-<title>CAD Not Defteri</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<title>Çizgi CAD v15 - Kalıcı Sesli Ölçü Girişi & Menü Onarımlı</title>
 <style>
   :root{
-    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --accent:#3b82f6; --accent2:#2563eb;
-    --text:#e2e8f0; --muted:#94a3b8; --danger:#ef4444; --ok:#22c55e; --border:#334155;
+    --bg:#1b1d1f;
+    --panel:#242629;
+    --panel2:#2c2f33;
+    --panel3:#33373c;
+    --line:#3a3d42;
+    --ink:#e8e8e8;
+    --dim:#9aa0a6;
+    --accent:#4fa8ff;
+    --accent2:#ffb454;
+    --danger:#ff5c5c;
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; user-select:none;}
-  #app{display:flex; flex-direction:column; width:100vw; height:100vh; height:100dvh;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;}
 
-  /* ---------- LOCK SCREEN ---------- */
-  #lockScreen{position:fixed; inset:0; background:linear-gradient(160deg,#0f172a,#1e293b 60%,#111827); z-index:9999;
-    display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;}
-  #lockScreen h1{font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:.5px;}
-  #lockScreen .sub{color:var(--muted); font-size:13px; margin-bottom:10px;}
-  #lockBox{background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:28px 26px; width:min(320px,86vw); text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.4);}
-  #pwInput{width:100%; font-size:26px; letter-spacing:8px; text-align:center; padding:12px 8px; border-radius:10px; border:1px solid var(--border); background:#0b1220; color:var(--text); outline:none;}
-  #pwInput:focus{border-color:var(--accent);}
-  #lockBtn{margin-top:14px; width:100%; padding:12px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:16px; font-weight:600; cursor:pointer;}
-  #lockBtn:active{background:var(--accent2);}
-  #lockError{color:var(--danger); font-size:13px; height:16px; margin-top:8px;}
+  #topbar{
+    display:flex;align-items:center;gap:4px;padding:6px 6px;
+    background:var(--panel);border-bottom:1px solid var(--line);
+    overflow-x:auto;overflow-y:hidden;flex-shrink:0;
+    -webkit-overflow-scrolling:touch;
+  }
+  #topbar::-webkit-scrollbar{height:0;}
 
-  /* ---------- TOP BAR ---------- */
-  #topbar{display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:nowrap; overflow-x:auto;}
-  #topbar::-webkit-scrollbar{height:4px;}
-  .navbtn{background:var(--panel2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; font-size:14px; white-space:nowrap; cursor:pointer;}
-  .navbtn:active{background:var(--accent2);}
-  #dateLabel{font-weight:600; font-size:14px; padding:0 4px; white-space:nowrap;}
-  #dateInput{background:var(--panel2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px; font-size:13px;}
-  #syncDot{width:9px; height:9px; border-radius:50%; background:var(--muted); margin-left:4px; flex:0 0 auto;}
-  #syncDot.on{background:var(--ok);}
-  #syncDot.busy{background:#f59e0b;}
+  button.gbtn{
+    background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:6px 8px;font-size:16px;line-height:1;
+    display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;
+    flex-shrink:0;min-width:38px;height:38px;justify-content:center;position:relative;
+  }
+  button.gbtn .lbl{font-size:8px;color:var(--dim);letter-spacing:.2px;}
+  button.gbtn:active{background:var(--panel3);}
+  button.gbtn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);}
+  button.gbtn.active .lbl{color:#0d1117;}
+  button.gbtn.on{background:#2f4a63;border-color:var(--accent);color:var(--accent);}
+  button.gbtn.on .lbl{color:var(--accent);}
+  button.gbtn .dot{position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--accent2);display:none;}
+  button.gbtn.hasSel .dot{display:block;}
+  .tsep{width:1px;height:26px;background:var(--line);flex-shrink:0;margin:0 3px;}
 
-  /* ---------- TOOLBAR ---------- */
-  #toolbar{display:flex; align-items:center; gap:6px; padding:6px 8px; background:var(--panel2); border-bottom:1px solid var(--border); overflow-x:auto; white-space:nowrap;}
-  #toolbar::-webkit-scrollbar{height:4px;}
-  .tool{background:#1c2740; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 9px; font-size:16px; cursor:pointer; flex:0 0 auto; line-height:1;}
-  .tool.active{background:var(--accent); border-color:var(--accent);}
-  .tool.toggle.on{background:#0e7490; border-color:#0e7490;}
-  .sep{width:1px; align-self:stretch; background:var(--border); margin:0 3px; flex:0 0 auto;}
-  select.tool, input[type=color].tool{padding:5px; height:36px;}
-  #finishPolyBtn{display:none;}
+  #popover, #contextMenu{
+    position:fixed;z-index:50;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:5px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.4);
+    min-width:180px;
+  }
+  #popover.show, #contextMenu.show{display:flex;flex-direction:column;gap:4px;}
+  .pbtn{
+    background:var(--panel3);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:7px 9px;font-size:13px;display:flex;align-items:center;gap:7px;
+    cursor:pointer;width:100%;text-align:left;
+  }
+  .pbtn:hover{background:var(--line);}
+  .pbtn.active{background:var(--accent);color:#0d1117;border-color:var(--accent);}
+  .pbtn .ic{font-size:15px;width:18px;text-align:center;}
 
-  /* ---------- WORKSPACE ---------- */
-  #workspace{flex:1; overflow-y:auto; overflow-x:hidden; background:#0b1220; padding:16px 0 90px; display:flex; flex-direction:column; align-items:center; gap:22px;}
-  .pageWrap{position:relative; width:min(96vw,760px); aspect-ratio:210/297; background:#fff; box-shadow:0 4px 24px rgba(0,0,0,.5); border-radius:4px; overflow:hidden; flex:0 0 auto;}
-  .pageWrap .pageLabel{position:absolute; top:6px; left:8px; font-size:11px; color:#94a3b8; z-index:5; background:rgba(255,255,255,.7); padding:1px 6px; border-radius:4px;}
-  .pageWrap .delPageBtn{position:absolute; top:4px; right:8px; z-index:6; background:rgba(239,68,68,.85); color:#fff; border:none; border-radius:6px; width:24px; height:24px; font-size:14px; cursor:pointer;}
-  canvas.gridLayer, canvas.inkCanvas{position:absolute; top:0; left:0; width:100%; height:100%; touch-action:none;}
-  canvas.gridLayer{z-index:1;}
-  canvas.inkCanvas{z-index:2;}
-  .overlay{position:absolute; top:0; left:0; width:100%; height:100%; z-index:3; pointer-events:none;}
-  .box{position:absolute; pointer-events:auto; border:1.5px dashed rgba(0,0,0,.35); border-radius:6px; min-width:60px; min-height:40px; overflow:hidden; touch-action:none;}
-  .box.locked{border-style:solid; border-color:rgba(0,0,0,.15);}
-  .box .boxBar{position:absolute; top:0; left:0; right:0; height:22px; background:rgba(30,41,59,.75); display:flex; align-items:center; justify-content:flex-end; gap:3px; padding:0 3px; cursor:grab; z-index:2;}
-  .box .boxBar button{background:rgba(255,255,255,.15); border:none; color:#fff; width:18px; height:18px; border-radius:4px; font-size:11px; cursor:pointer; line-height:1;}
-  .box .boxBar button.ok{background:#16a34a;}
-  .box .boxBar button.del{background:#dc2626;}
-  .box textarea{width:100%; height:100%; border:none; resize:none; padding:24px 8px 8px; font-size:14px; font-family:inherit; outline:none; background:transparent; color:#111;}
-  .box img{width:100%; height:100%; object-fit:contain; display:block; padding-top:22px; box-sizing:border-box; pointer-events:none;}
-  .box .resizeHandle{position:absolute; right:2px; bottom:2px; width:18px; height:18px; background:rgba(0,0,0,.35); border-radius:4px 0 6px 0; cursor:se-resize; z-index:2;}
-  .box.note{background:#fff59d;}
+  #overlayClick{position:fixed;inset:0;z-index:40;display:none;}
+  #overlayClick.show{display:block;}
 
-  /* theme backgrounds applied to pageWrap */
-  .theme-default{background:#ffffff;}
-  .theme-sepya{background:#f4ecd8;}
-  .theme-krem{background:#fdf6e3;}
-  .theme-gri{background:#f1f3f5;}
-  .theme-mavi{background:#eaf3fb;}
-  .theme-yesil{background:#eef8ee;}
+  #canvasWrap{flex:1;position:relative;overflow:hidden;touch-action:none;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
 
-  #addPageBar{display:flex; justify-content:center; padding:6px;}
-  #addPageBtn{background:var(--panel2); border:1px dashed var(--border); color:var(--text); padding:12px 24px; border-radius:10px; cursor:pointer; font-size:14px;}
+  #statusbar{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--panel);border-top:1px solid var(--line);
+    padding:4px 8px;font-size:10.5px;color:var(--dim);gap:8px;flex-shrink:0;
+  }
+  #statusbar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-  #fileInputPhoto{display:none;}
-  #snapDot{position:absolute; width:12px; height:12px; border:2px solid #f59e0b; border-radius:50%; pointer-events:none; z-index:10; display:none; transform:translate(-50%,-50%);}
-  .trackGuide{position:absolute; z-index:9; pointer-events:none; background:transparent; border-left:1px dashed #f59e0b; border-top:1px dashed #f59e0b; display:none;}
+  #lenInput{
+    position:absolute;z-index:20;background:#101214;color:var(--accent2);
+    border:1px solid var(--accent2);border-radius:6px;padding:4px 6px;
+    font-size:13px;width:110px;display:none;text-align:center;
+  }
 
-  #toast{position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#111827; border:1px solid var(--border); color:#fff; padding:9px 16px; border-radius:20px; font-size:13px; z-index:9998; opacity:0; transition:opacity .25s; pointer-events:none;}
+  /* Dinamik Ölçü ve Ses Gösterge Kutusu */
+  #directInputBox {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(16,18,20,0.95); border: 2px solid var(--accent2);
+    border-radius: 8px; padding: 8px 16px; font-size: 15px; font-weight: 600;
+    color: var(--accent2); display: none; z-index: 35; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  }
+
+  #voiceStatus {
+    position: absolute; top: 16px; right: 16px;
+    background: rgba(255, 92, 92, 0.2); border: 1px solid var(--danger);
+    border-radius: 20px; padding: 6px 12px; font-size: 12px; color: var(--danger);
+    display: none; z-index: 35; align-items: center; gap: 6px; font-weight: 600;
+  }
+  #voiceStatus.active { display: flex; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+  #toast{
+    position:absolute;left:50%;top:10px;transform:translateX(-50%);
+    background:#101214;border:1px solid var(--line);color:var(--ink);
+    padding:7px 13px;border-radius:8px;font-size:12.5px;z-index:30;
+    opacity:0;pointer-events:none;transition:opacity .25s;white-space:nowrap;
+  }
   #toast.show{opacity:1;}
-
-  ::selection{background:var(--accent);}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- LOCK SCREEN -->
-  <div id="lockScreen">
-    <h1>CAD Not Defteri</h1>
-    <div class="sub">Devam etmek için şifreyi girin</div>
-    <div id="lockBox">
-      <input id="pwInput" type="password" inputmode="numeric" maxlength="12" placeholder="••••••" autocomplete="off">
-      <button id="lockBtn">Giriş Yap</button>
-      <div id="lockError"></div>
-    </div>
-  </div>
-
-  <!-- TOP BAR -->
   <div id="topbar">
-    <button class="navbtn" id="prevDayBtn">◀ Önceki</button>
-    <button class="navbtn" id="todayBtn">Bugün</button>
-    <button class="navbtn" id="nextDayBtn">Sonraki ▶</button>
-    <span id="dateLabel">-</span>
-    <input type="date" id="dateInput">
-    <span id="syncDot" title="Senkron durumu"></span>
+    <button class="gbtn active" id="grpDraw"><span id="grpDrawIcon">▬</span><span class="lbl">Çiz</span></button>
+    <button class="gbtn" id="grpEdit"><span>✂️</span><span class="lbl">Düzenle</span></button>
+    <button class="gbtn" id="btnEraser"><span>🧹</span><span class="lbl">Sil</span></button>
+    <button class="gbtn" id="btnUndo"><span>↩️</span><span class="lbl">Geri Al</span></button>
+    <div class="tsep"></div>
+    <button class="gbtn" id="toolDim"><span>📏</span><span class="lbl">Ölçü</span></button>
+    <div class="tsep"></div>
+    <button class="gbtn on" id="btnOrtho"><span>↕</span><span class="lbl">Ortho</span></button>
+    <button class="gbtn on" id="btnSnap"><span>🧲</span><span class="lbl">Yakala</span></button>
+    <button class="gbtn" id="btnSnapMenu"><span>⚙️</span><span class="lbl">Snap Menü</span></button>
+    <div class="tsep"></div>
+    <button class="gbtn" id="btnVoiceToggle"><span>🎙️</span><span class="lbl">Sesle Çiz</span></button>
+    <div class="tsep"></div>
+    <button class="gbtn" id="grpView"><span>⛶</span><span class="lbl">Görünüm</span></button>
+    <button class="gbtn" id="grpFile"><span>💾</span><span class="lbl">Dosya</span></button>
+    <button class="gbtn" id="grpInput"><span id="grpInputIcon">🖊️</span><span class="lbl">Giriş</span></button>
   </div>
 
-  <!-- TOOLBAR -->
-  <div id="toolbar">
-    <button class="tool" data-tool="pen" title="Serbest Kalem">✏️</button>
-    <input type="color" id="penColor" class="tool" value="#1d4ed8" title="Kalem Rengi">
-    <button class="tool" data-tool="eraser" title="Noktasal Silgi">🧽</button>
-    <div class="sep"></div>
-    <button class="tool" data-tool="line" title="Çizgi">📏</button>
-    <button class="tool" data-tool="mdf" title="18mm MDF Çizgi">🟫</button>
-    <button class="tool" data-tool="dim" title="Ölçülendirme">📐</button>
-    <button class="tool" data-tool="polyline" title="Çoklu Çizgi">🖇️</button>
-    <button class="tool" data-tool="rect" title="Dikdörtgen">▭</button>
-    <button class="tool" id="finishPolyBtn" title="Çizgiyi Bitir">✔ Bitir</button>
-    <div class="sep"></div>
-    <button class="tool" data-tool="select" title="Seç / Taşı">🖱️</button>
-    <button class="tool" id="deleteSelBtn" title="Sil">🗑️</button>
-    <button class="tool" id="copySelBtn" title="Kopyala">📋</button>
-    <button class="tool" id="pasteSelBtn" title="Yapıştır">📌</button>
-    <div class="sep"></div>
-    <button class="tool toggle" id="orthoBtn" title="Ortho (Yatay/Dikey Kilit)">⊥</button>
-    <button class="tool toggle on" id="snapBtn" title="Snap (Endpoint/Midpoint)">🧲</button>
-    <div class="sep"></div>
-    <button class="tool" id="addPhotoBtn" title="Fotoğraf Ekle">🖼️</button>
-    <button class="tool" id="addNoteBtn" title="Not Ekle">🗒️</button>
-    <div class="sep"></div>
-    <select id="themeSelect" class="tool" title="Sayfa Teması">
-      <option value="theme-default">Varsayılan</option>
-      <option value="theme-sepya">Sepya</option>
-      <option value="theme-krem">Krem</option>
-      <option value="theme-gri">Açık Gri</option>
-      <option value="theme-mavi">Açık Mavi</option>
-      <option value="theme-yesil">Açık Yeşil</option>
-    </select>
-    <select id="gridSelect" class="tool" title="Izgara Boyutu">
-      <option value="0">Izgara Yok</option>
-      <option value="10">Küçük (10px)</option>
-      <option value="20" selected>Orta (20px)</option>
-      <option value="40">Büyük (40px)</option>
-    </select>
-    <div class="sep"></div>
-    <button class="tool" id="exportExcelBtn" title="Excel'e Aktar">📊 Excel</button>
-    <button class="tool" id="exportPdfBtn" title="PDF'e Aktar">📄 PDF</button>
+  <div id="canvasWrap">
+    <canvas id="cv"></canvas>
+    <input id="lenInput" inputmode="decimal" />
+    <div id="directInputBox">Ölçü (mm): <span id="directInputVal">0</span></div>
+    <div id="voiceStatus"><span>🎙️</span><span>Dinleniyor...</span></div>
+    <div id="toast"></div>
   </div>
 
-  <!-- WORKSPACE -->
-  <div id="workspace"></div>
-  <div id="addPageBar"><button id="addPageBtn">＋ Yeni Sayfa Ekle</button></div>
+  <div id="statusbar">
+    <span id="stMode">Mod: MDF</span>
+    <span id="stCoord">X:0 Y:0 mm</span>
+    <span id="stZoom">Ölçek: 100%</span>
+    <span id="stInfo"></span>
+  </div>
+
 </div>
 
-<input type="file" id="fileInputPhoto" accept="image/*" multiple>
-<div id="toast"></div>
+<div id="overlayClick"></div>
+<div id="popover"></div>
 
+<div id="contextMenu">
+  <button class="pbtn" id="cmLabel"><span class="ic">🏷️</span><span>İsim / Açıklama Ver</span></button>
+  <button class="pbtn" id="cmEditLen"><span class="ic">✏️</span><span>Uzunluk Değiştir (mm)</span></button>
+  <button class="pbtn" id="cmRotate"><span class="ic">🔄</span><span>90° Döndür</span></button>
+  <button class="pbtn" id="cmCopy"><span class="ic">📋</span><span>Kopyala</span></button>
+  <button class="pbtn" id="cmDelete" style="color:var(--danger);"><span class="ic">🗑️</span><span>Sil</span></button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function(){
 "use strict";
 
-/* ============================================================
-   AYARLAR
-============================================================ */
-const APP_PASSWORD = "156155";
-const MM_PER_PX = 25.4 / 96;      // 96dpi ekran varsayımı
-const PX_PER_MM = 96 / 25.4;      // ~3.7795
-const CANVAS_W = 1240, CANVAS_H = 1754; // A4 @ ~150dpi dahili çözünürlük
-const SNAP_TOL = 22;      // dahili px
-const HIT_TOL  = 16;      // seçim tolerans dahili px
+// ---------- GEOMETRİ & NOKTA (POINT) SINIFI ----------
+class Point {
+  constructor(x, y) {
+    this.x = Number(x);
+    this.y = Number(y);
+  }
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD-cad-notlarim-api-key-12345",
-  authDomain: "cad-notlarim.firebaseapp.com",
-  databaseURL: "https://cad-notlarim-default-rtdb.firebaseio.com",
-  projectId: "cad-notlarim",
-  storageBucket: "cad-notlarim.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:cadnotlarimapp123"
+  distanceTo(p) {
+    return Math.hypot(this.x - p.x, this.y - p.y);
+  }
+
+  midpointTo(p) {
+    return new Point((this.x + p.x) / 2, (this.y + p.y) / 2);
+  }
+
+  projectToSegment(p1, p2) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 === 0) return new Point(p1.x, p1.y);
+
+    let t = ((this.x - p1.x) * dx + (this.y - p1.y) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    return new Point(p1.x + t * dx, p1.y + t * dy);
+  }
+
+  distanceToSegment(p1, p2) {
+    const proj = this.projectToSegment(p1, p2);
+    return this.distanceTo(proj);
+  }
+}
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+
+// ---------- State ----------
+let shapes = [];
+let undoStack = []; 
+let nextId = 1;
+let scale = 3;
+let offX = 0, offY = 0;
+let tool = 'mdf';        
+let inputMode = 'pen';     
+let orthoOn = true;
+let snapOn = true;
+let voiceControlOn = false; // Sesli kontrol modu varsayılan KAPALI — kullanıcı dokunarak açar
+let multiSelect = false;
+
+let snapSettings = {
+  endpoint: true,
+  midpoint: true,
+  pointSnap: true,
+  perpendicular: true,
+  tracking: true,
+  corner: true,
+  grid: false
 };
 
-let fbApp=null, fbDb=null, fbReady=false;
-try{
-  fbApp = firebase.initializeApp(firebaseConfig);
-  fbDb = firebase.database();
-  fbReady = true;
-}catch(e){ console.warn("Firebase başlatılamadı:", e); fbReady=false; }
+let drawing = null;
+let liveWorld = null;
+let rawMouseWorld = null;
+let snapResult = null;
+let hoverTrackPoint = null;
 
-/* ============================================================
-   YARDIMCI FONKSİYONLAR
-============================================================ */
-function pad2(n){ return n<10 ? "0"+n : ""+n; }
-function toISO(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
-function fromISO(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
-function fmtLabel(iso){
-  const d = fromISO(iso);
-  const days=["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
-  const months=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
-  return d.getDate()+" "+months[d.getMonth()]+" "+d.getFullYear()+" "+days[d.getDay()];
-}
-function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
-function dist(x1,y1,x2,y2){ return Math.hypot(x2-x1,y2-y1); }
-function distToSeg(px,py,x1,y1,x2,y2){
-  const A=px-x1, B=py-y1, C=x2-x1, D=y2-y1;
-  const dot=A*C+B*D, len=C*C+D*D;
-  let t = len!==0 ? dot/len : -1;
-  t = Math.max(0,Math.min(1,t));
-  const xx=x1+t*C, yy=y1+t*D;
-  return dist(px,py,xx,yy);
-}
-function showToast(msg){
-  const t=document.getElementById("toast");
-  t.textContent=msg; t.classList.add("show");
-  clearTimeout(showToast._h);
-  showToast._h=setTimeout(()=>t.classList.remove("show"),1800);
-}
-function debounce(fn,ms){ let h; return function(...a){ clearTimeout(h); h=setTimeout(()=>fn.apply(this,a),ms); }; }
+let selectedShapes = new Set();
+let contextMenuTarget = null;
+let dragSnapshot = null;   
+let dragMoved = false;
 
-/* ============================================================
-   DURUM (STATE)
-============================================================ */
-let currentDate = toISO(new Date());
-let dayData = { pages: [] };   // { pages: [ {id,theme,gridSize,strokes:[],boxes:[]} ] }
-let activeTool = "pen";
-let orthoOn = false;
-let snapOn = true;
-let penColor = "#1d4ed8";
-let clipboardStroke = null;
-let selection = null; // {pageId, index}
-let suppressRemoteEcho = false;
+let clipboard = [];
+let pasteOffset = 0;
 
-function newPage(theme,grid){
-  return { id: uid(), theme: theme||"theme-default", gridSize: (grid===undefined?20:grid), strokes: [], boxes: [] };
-}
-function blankDay(){ return { pages: [ newPage() ] }; }
+let editingLabel = null;
+let directTypedLength = "";
 
-/* ============================================================
-   YEREL DEPOLAMA (localStorage yedek/önbellek)
-============================================================ */
-function localKey(iso){ return "cadnotdefteri_"+iso; }
-function saveLocal(iso, data){
-  try{ localStorage.setItem(localKey(iso), JSON.stringify(data)); }catch(e){ console.warn("local kayıt hatası",e); }
-}
-function loadLocal(iso){
-  try{ const raw=localStorage.getItem(localKey(iso)); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+const pointers = new Map();
+let pinchStartDist=null, pinchStartScale=null, pinchStartMid=null, pinchStartOff=null;
+let panLast=null;
+let isMiddleMousePan = false;
+
+const MDF_THICKNESS = 18;
+
+// ---------- DOM ----------
+const lenInput = document.getElementById('lenInput');
+const directInputBox = document.getElementById('directInputBox');
+const directInputVal = document.getElementById('directInputVal');
+const voiceStatus = document.getElementById('voiceStatus');
+const btnVoiceToggle = document.getElementById('btnVoiceToggle');
+const toast = document.getElementById('toast');
+const stMode = document.getElementById('stMode');
+const stCoord = document.getElementById('stCoord');
+const stZoom = document.getElementById('stZoom');
+const popover = document.getElementById('popover');
+const contextMenu = document.getElementById('contextMenu');
+const overlayClick = document.getElementById('overlayClick');
+
+// ---------- Utility & History ----------
+function pushHistory(){
+  undoStack.push(JSON.stringify(shapes));
+  if(undoStack.length > 30) undoStack.shift();
 }
 
-/* ============================================================
-   FIREBASE SENKRON
-============================================================ */
-const syncDot = document.getElementById("syncDot");
-function setSyncState(state){
-  syncDot.classList.remove("on","busy");
-  if(state==="on") syncDot.classList.add("on");
-  else if(state==="busy") syncDot.classList.add("busy");
-}
-let currentDayRef = null;
-let currentListener = null;
-
-function attachFirebaseListener(iso){
-  if(!fbReady) return;
-  if(currentDayRef && currentListener) currentDayRef.off("value", currentListener);
-  currentDayRef = fbDb.ref("notlar/"+iso);
-  setSyncState("busy");
-  currentListener = currentDayRef.on("value", snap=>{
-    const val = snap.val();
-    if(iso !== currentDate) return; // kullanıcı başka güne geçtiyse yoksay
-    if(val && val.json){
-      try{
-        const parsed = JSON.parse(val.json);
-        suppressRemoteEcho = true;
-        dayData = parsed;
-        saveLocal(iso, dayData);
-        renderAllPages();
-        suppressRemoteEcho = false;
-      }catch(e){ console.warn("Firebase veri ayrıştırma hatası",e); }
-    }
-    setSyncState("on");
-  }, err=>{
-    console.warn("Firebase okuma hatası",err);
-    setSyncState("off");
+function undo(){
+  if(undoStack.length === 0){
+    showToast('Geri alınacak işlem yok');
+    return;
+  }
+  shapes = JSON.parse(undoStack.pop());
+  shapes.forEach(s => {
+    s.points = s.points.map(p => new Point(p.x, p.y));
+    if(s.rawCursor) s.rawCursor = new Point(s.rawCursor.x, s.rawCursor.y);
   });
+  selectedShapes.clear();
+  drawing = null;
+  autosave();
+  render();
+  showToast('İşlem geri alındı');
 }
 
-const pushToFirebase = debounce(function(){
-  if(!fbReady) return;
-  if(suppressRemoteEcho) return;
-  setSyncState("busy");
-  fbDb.ref("notlar/"+currentDate).set({ json: JSON.stringify(dayData), updatedAt: Date.now() })
-    .then(()=>setSyncState("on"))
-    .catch(err=>{ console.warn("Firebase yazma hatası",err); setSyncState("off"); });
-}, 700);
+function uid(){ return nextId++; }
+function worldToScreen(p){ return { x: p.x*scale+offX, y: p.y*scale+offY }; }
+function screenToWorld(p){ return new Point((p.x-offX)/scale, (p.y-offY)/scale); }
+function fmtLen(mm){ return (Math.round(mm*10)/10).toString().replace(/\.0$/,''); }
 
-function persist(){
-  saveLocal(currentDate, dayData);
-  pushToFirebase();
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>toast.classList.remove('show'), 2000);
 }
 
-/* ============================================================
-   GÜN YÜKLE / DEĞİŞTİR
-============================================================ */
-function loadDay(iso){
-  currentDate = iso;
-  document.getElementById("dateLabel").textContent = fmtLabel(iso);
-  document.getElementById("dateInput").value = iso;
-  const local = loadLocal(iso);
-  dayData = local && local.pages && local.pages.length ? local : blankDay();
-  renderAllPages();
-  attachFirebaseListener(iso);
+function resizeCanvas(){
+  const r = wrap.getBoundingClientRect();
+  cv.width = r.width*devicePixelRatio;
+  cv.height = r.height*devicePixelRatio;
+  cv.style.width=r.width+'px'; cv.style.height=r.height+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  render();
 }
+window.addEventListener('resize', resizeCanvas);
 
-/* ============================================================
-   SAYFA / CANVAS OLUŞTURMA (DOM)
-============================================================ */
-const workspace = document.getElementById("workspace");
-
-function renderAllPages(){
-  workspace.innerHTML = "";
-  dayData.pages.forEach((page, idx)=> workspace.appendChild(buildPageDOM(page, idx)));
+// ---------- Persistence ----------
+const STORAGE_KEY = 'cizgi_cad_v15_data';
+function save(showMsg){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({shapes,scale,offX,offY,nextId}));
+    if(showMsg) showToast('Kaydedildi');
+  }catch(e){ if(showMsg) showToast('Kaydedilemedi'); }
 }
-
-function buildPageDOM(page, idx){
-  const wrap = document.createElement("div");
-  wrap.className = "pageWrap "+page.theme;
-  wrap.dataset.pageId = page.id;
-
-  const label = document.createElement("div");
-  label.className = "pageLabel";
-  label.textContent = "Sayfa "+(idx+1);
-  wrap.appendChild(label);
-
-  if(dayData.pages.length>1){
-    const del = document.createElement("button");
-    del.className = "delPageBtn"; del.textContent="×"; del.title="Sayfayı Sil";
-    del.onclick = ()=>{
-      if(confirm("Bu sayfayı silmek istiyor musunuz?")){
-        dayData.pages = dayData.pages.filter(p=>p.id!==page.id);
-        renderAllPages(); persist();
-      }
-    };
-    wrap.appendChild(del);
-  }
-
-  const gridCanvas = document.createElement("canvas");
-  gridCanvas.className="gridLayer"; gridCanvas.width=CANVAS_W; gridCanvas.height=CANVAS_H;
-  wrap.appendChild(gridCanvas);
-
-  const ink = document.createElement("canvas");
-  ink.className="inkCanvas"; ink.width=CANVAS_W; ink.height=CANVAS_H;
-  wrap.appendChild(ink);
-
-  const overlay = document.createElement("div");
-  overlay.className="overlay";
-  wrap.appendChild(overlay);
-
-  drawGrid(gridCanvas, page.gridSize);
-  drawStrokes(ink, page.strokes, selection && selection.pageId===page.id ? selection.index : -1);
-  page.boxes.forEach(b=> overlay.appendChild(buildBoxDOM(page,b)));
-
-  wirePagePointer(wrap, ink, page);
-  return wrap;
-}
-
-function refreshPage(pageId){
-  const wrap = workspace.querySelector('.pageWrap[data-page-id="'+pageId+'"]');
-  if(!wrap) return;
-  const page = dayData.pages.find(p=>p.id===pageId);
-  if(!page) return;
-  wrap.className = "pageWrap "+page.theme;
-  const ink = wrap.querySelector(".inkCanvas");
-  drawStrokes(ink, page.strokes, selection && selection.pageId===page.id ? selection.index : -1);
-  const grid = wrap.querySelector(".gridLayer");
-  drawGrid(grid, page.gridSize);
-  const overlay = wrap.querySelector(".overlay");
-  overlay.innerHTML="";
-  page.boxes.forEach(b=> overlay.appendChild(buildBoxDOM(page,b)));
-}
-
-/* ============================================================
-   IZGARA ÇİZİMİ
-============================================================ */
-function drawGrid(canvas, size){
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!size || size<=0) return;
-  ctx.strokeStyle = "rgba(0,0,0,0.10)";
-  ctx.lineWidth = 1;
-  for(let x=0;x<=canvas.width;x+=size){
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
-  }
-  for(let y=0;y<=canvas.height;y+=size){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
-  }
-}
-
-/* ============================================================
-   ÇİZİM (STROKES) ÇİZDİRME
-============================================================ */
-function strokeCandidatePoints(s){
-  // snap için uç/orta noktalar
-  const pts=[];
-  if(s.type==="pen"){
-    if(s.points.length){ pts.push(s.points[0]); pts.push(s.points[s.points.length-1]); }
-  } else if(s.type==="line" || s.type==="mdf" || s.type==="dim"){
-    pts.push({x:s.x1,y:s.y1},{x:s.x2,y:s.y2},{x:(s.x1+s.x2)/2,y:(s.y1+s.y2)/2});
-  } else if(s.type==="rect"){
-    pts.push({x:s.x1,y:s.y1},{x:s.x2,y:s.y1},{x:s.x1,y:s.y2},{x:s.x2,y:s.y2},
-              {x:(s.x1+s.x2)/2,y:s.y1},{x:(s.x1+s.x2)/2,y:s.y2},{x:s.x1,y:(s.y1+s.y2)/2},{x:s.x2,y:(s.y1+s.y2)/2});
-  } else if(s.type==="polyline"){
-    s.points.forEach((p,i)=>{
-      pts.push(p);
-      if(i>0){ const q=s.points[i-1]; pts.push({x:(p.x+q.x)/2,y:(p.y+q.y)/2}); }
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const d = JSON.parse(raw);
+    shapes = d.shapes||[]; scale=d.scale||3; offX=d.offX||0; offY=d.offY||0;
+    shapes.forEach(s => {
+      s.points = s.points.map(p => new Point(p.x, p.y));
+      if(s.rawCursor) s.rawCursor = new Point(s.rawCursor.x, s.rawCursor.y);
     });
+    nextId = d.nextId || (shapes.reduce((m,s)=>Math.max(m,s.id||0),0)+1);
+    return true;
+  }catch(e){ return false; }
+}
+function autosave(){ save(false); }
+
+// ---------- MDF Geometry ----------
+function getMdfCorners(p0, p1, rawCursor){
+  const dx = p1.x - p0.x, dy = p1.y - p0.y;
+  const len = p0.distanceTo(p1) || 1;
+  let nx = -dy / len, ny = dx / len;
+  const t = MDF_THICKNESS;
+
+  if(rawCursor){
+    const cross = (p1.x - p0.x)*(rawCursor.y - p0.y) - (p1.y - p0.y)*(rawCursor.x - p0.x);
+    if(cross < 0){
+      nx = -nx; ny = -ny;
+    }
+  }
+
+  return [
+    new Point(p0.x, p0.y),
+    new Point(p1.x, p1.y),
+    new Point(p1.x + nx * t, p1.y + ny * t),
+    new Point(p0.x + nx * t, p0.y + ny * t)
+  ];
+}
+
+// ---------- Gelişmiş Snap Engine ----------
+function getSnapPoints(excludeId){
+  const pts = [];
+  for(const s of shapes){
+    if(s.id === excludeId || s.type === 'dim') continue;
+
+    if(snapSettings.endpoint || snapSettings.pointSnap){
+      if(s.type === 'mdf'){
+        const corners = getMdfCorners(s.points[0], s.points[1], s.rawCursor);
+        corners.forEach(p => pts.push({ point: p, type: 'point', parentShape: s }));
+      } else {
+        s.points.forEach(p => pts.push({ point: p, type: 'point', parentShape: s }));
+      }
+    }
+
+    if(snapSettings.midpoint){
+      if(s.type === 'line'){
+        pts.push({ point: s.points[0].midpointTo(s.points[1]), type: 'mid', parentShape: s });
+      } else if(s.type === 'rect' || s.type === 'mdf'){
+        const p = s.type === 'mdf' ? getMdfCorners(s.points[0], s.points[1], s.rawCursor) : s.points;
+        for(let i=0; i<4; i++){
+          const a = p[i], b = p[(i+1)%4];
+          pts.push({ point: a.midpointTo(b), type: 'mid', parentShape: s });
+        }
+      }
+    }
   }
   return pts;
 }
 
-function allCandidatePoints(strokes, excludeIdx){
-  let all=[];
-  strokes.forEach((s,i)=>{ if(i!==excludeIdx) all = all.concat(strokeCandidatePoints(s)); });
-  return all;
+function computeSnap(worldPt, excludeId){
+  if(!snapOn) return { point: worldPt, marker: null, guides: [] };
+  
+  const snapPts = getSnapPoints(excludeId);
+  const radius = 16 / scale;
+  let best = null, minD = Infinity;
+
+  for(const sp of snapPts){
+    const d = worldPt.distanceTo(sp.point);
+    if(d < radius && d < minD){
+      minD = d;
+      best = sp;
+    }
+  }
+
+  if(best){
+    hoverTrackPoint = best.point;
+    return { point: best.point, marker: best.type, guides: [] };
+  }
+
+  if(snapSettings.tracking && hoverTrackPoint){
+    const tol = 12 / scale;
+    const dx = Math.abs(worldPt.x - hoverTrackPoint.x);
+    const dy = Math.abs(worldPt.y - hoverTrackPoint.y);
+
+    if(dx < tol){
+      return { point: new Point(hoverTrackPoint.x, worldPt.y), marker: 'track', guides: [hoverTrackPoint] };
+    }
+    if(dy < tol){
+      return { point: new Point(worldPt.x, hoverTrackPoint.y), marker: 'track', guides: [hoverTrackPoint] };
+    }
+  }
+
+  if(snapSettings.perpendicular && drawing && drawing.points.length > 0){
+    for(const s of shapes){
+      if(s.id === excludeId || s.type === 'dim') continue;
+      const edges = s.type === 'mdf' ? getMdfCorners(s.points[0], s.points[1], s.rawCursor) : s.points;
+      for(let i=0; i < (s.type==='line'?1:edges.length); i++){
+        const p1 = edges[i], p2 = edges[(i+1)%edges.length];
+        const proj = worldPt.projectToSegment(p1, p2);
+        if(worldPt.distanceTo(proj) < radius){
+          return { point: proj, marker: 'perp', guides: [p1, p2] };
+        }
+      }
+    }
+  }
+
+  return { point: worldPt, marker: null, guides: [] };
 }
 
-function drawArrowHead(ctx,x,y,angle,size){
+function applyOrtho(start, pt){
+  if(!orthoOn || !start) return pt;
+  const dx = Math.abs(pt.x - start.x), dy = Math.abs(pt.y - start.y);
+  return dx >= dy ? new Point(pt.x, start.y) : new Point(start.x, pt.y);
+}
+
+// ---------- SES TANIMA (SPEECH RECOGNITION) MOTORU ----------
+let recognition = null;
+let voiceCommitTimer = null;
+
+function initVoiceRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('Cihazınız ses tanıma özelliğini desteklemiyor.');
+    return null;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.lang = 'tr-TR';
+  rec.continuous = true;
+  rec.interimResults = true;
+
+  rec.onresult = (event) => {
+    let transcript = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      transcript += event.results[i][0].transcript;
+    }
+
+    transcript = transcript.trim().toLowerCase();
+
+    if(!drawing || (drawing.type !== 'line' && drawing.type !== 'mdf')) return;
+
+    const parsedNumber = parseTurkishNumber(transcript);
+
+    if (parsedNumber && parsedNumber > 0) {
+      directTypedLength = parsedNumber.toString();
+      updateDirectInputUI();
+
+      clearTimeout(voiceCommitTimer);
+      voiceCommitTimer = setTimeout(() => {
+        if (drawing && directTypedLength.length > 0) {
+          commitDirectTypedLength();
+        }
+      }, 350);
+    }
+  };
+
+  rec.onerror = (event) => {
+    if(event.error === 'not-allowed' || event.error === 'service-not-allowed'){
+      voiceControlOn = false;
+      btnVoiceToggle.classList.remove('on');
+      voiceStatus.classList.remove('active');
+      showToast('Mikrofon izni verilmedi. Tarayıcı site ayarlarından izin verin.');
+    }
+  };
+  rec.onend = () => {
+    if (voiceControlOn) {
+      try { rec.start(); } catch(e){}
+    } else {
+      voiceStatus.classList.remove('active');
+    }
+  };
+
+  return rec;
+}
+
+function startVoiceRecognition() {
+  if (!window.isSecureContext) {
+    showToast('Mikrofon için sayfayı bir sunucudan (http/https) açmanız gerekiyor');
+    voiceControlOn = false;
+    btnVoiceToggle.classList.remove('on');
+    return;
+  }
+  if (!recognition) recognition = initVoiceRecognition();
+  if (recognition) {
+    try {
+      recognition.start();
+      voiceStatus.classList.add('active');
+      showToast('Sesli ölçü dinleniyor');
+    } catch(e) {}
+  }
+}
+
+function stopVoiceRecognition() {
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
+  voiceStatus.classList.remove('active');
+  clearTimeout(voiceCommitTimer);
+}
+
+// Türkçe Metin Sayılarını Rakama Çevirme
+function parseTurkishNumber(str) {
+  const digits = str.replace(/[^0-9]/g, '');
+  if (digits.length > 0) return parseInt(digits, 10);
+
+  const units = { 'sıfır':0, 'bir':1, 'iki':2, 'üç':3, 'dört':4, 'beş':5, 'altı':6, 'yedi':7, 'sekiz':8, 'dokuz':9 };
+  const tens = { 'on':10, 'yirmi':20, 'otuz':30, 'kırk':40, 'elli':50, 'altmış':60, 'yetmiş':70, 'seksen':80, 'doksan':90 };
+  const hundreds = { 'yüz':100 };
+
+  const words = str.split(/\s+/);
+  let total = 0, current = 0;
+
+  for (let w of words) {
+    if (units[w] !== undefined) current += units[w];
+    else if (tens[w] !== undefined) current += tens[w];
+    else if (w === 'yüz') {
+      current = (current === 0 ? 1 : current) * 100;
+    } else if (w === 'bin') {
+      total += (current === 0 ? 1 : current) * 1000;
+      current = 0;
+    }
+  }
+  total += current;
+  return total > 0 ? total : null;
+}
+
+// ---------- Rendering & Visual Snapping ----------
+let labelHitboxes = [];
+
+function drawGrid(){
+  const r = wrap.getBoundingClientRect();
+  const step = pickGridStep();
+  const stepPx = step*scale;
   ctx.save();
-  ctx.translate(x,y); ctx.rotate(angle);
+  const startX = offX%stepPx, startY = offY%stepPx;
   ctx.beginPath();
-  ctx.moveTo(0,0);
-  ctx.lineTo(-size, size*0.42);
-  ctx.lineTo(-size, -size*0.42);
+  for(let x=startX;x<r.width;x+=stepPx){ ctx.moveTo(x,0); ctx.lineTo(x,r.height); }
+  for(let y=startY;y<r.height;y+=stepPx){ ctx.moveTo(0,y); ctx.lineTo(r.width,y); }
+  ctx.strokeStyle='#2a2d31'; ctx.lineWidth=1; ctx.stroke();
+  ctx.beginPath();
+  ctx.strokeStyle='#3a3f45';
+  ctx.moveTo(offX,0); ctx.lineTo(offX,r.height);
+  ctx.moveTo(0,offY); ctx.lineTo(r.width,offY);
+  ctx.stroke();
+  ctx.restore();
+}
+function pickGridStep(){
+  const target=60; let step=10;
+  while(step*scale<target) step*= (step/10===1?2.5:2);
+  while(step*scale>target*4) step/=2;
+  return step;
+}
+function normalFor(p0,p1){
+  const dx=p1.x-p0.x, dy=p1.y-p0.y;
+  let nx=-dy,ny=dx; const len=Math.hypot(nx,ny)||1;
+  nx/=len; ny/=len;
+  if(ny>0){ nx=-nx; ny=-ny; }
+  if(nx===0&&ny===0){ nx=0; ny=-1; }
+  return {x:nx,y:ny};
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function drawLabelBox(sx,sy,text,hitKey,mm,editable){
+  ctx.font='600 12px -apple-system, sans-serif';
+  const w=ctx.measureText(text).width;
+  const boxW=w+10, boxH=18;
+  const bx=sx-boxW/2, by=sy-boxH/2;
+  ctx.fillStyle='rgba(16,18,20,0.9)';
+  ctx.strokeStyle = (editingLabel && editingLabel.key===hitKey) ? '#ffb454' : '#3a3d42';
+  ctx.lineWidth=1;
+  roundRect(bx,by,boxW,boxH,5);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#ffb454';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text, sx, sy+0.5);
+  if(editable) labelHitboxes.push({x:bx,y:by,w:boxW,h:boxH,key:hitKey,mm});
+}
+
+function drawLenLabel(p0,p1,mm,hitKey,editable){
+  const s0=worldToScreen(p0), s1=worldToScreen(p1);
+  const mid={x:(s0.x+s1.x)/2,y:(s0.y+s1.y)/2};
+  const n=normalFor(p0,p1);
+  const offset=22;
+  drawLabelBox(mid.x+n.x*offset, mid.y+n.y*offset, fmtLen(mm)+' mm', hitKey, mm, editable!==false);
+}
+
+function drawMdf(s, isSelected){
+  const p0 = s.points[0], p1 = s.points[1];
+  const corners = getMdfCorners(p0, p1, s.rawCursor).map(worldToScreen);
+  ctx.beginPath();
+  corners.forEach((sp, i) => { i === 0 ? ctx.moveTo(sp.x, sp.y) : ctx.lineTo(sp.x, sp.y); });
+  ctx.closePath();
+  ctx.fillStyle = isSelected ? 'rgba(79,168,255,0.3)' : 'rgba(255,180,84,0.25)';
+  ctx.strokeStyle = isSelected ? '#4fa8ff' : '#ffb454';
+  ctx.lineWidth = 2;
+  ctx.fill(); ctx.stroke();
+
+  if(s.label){
+    const s0 = worldToScreen(p0), s1 = worldToScreen(p1);
+    const mid = { x: (s0.x+s1.x)/2, y: (s0.y+s1.y)/2 };
+    ctx.font = 'bold 12px -apple-system, sans-serif';
+    ctx.fillStyle = '#4fa8ff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(s.label, mid.x, mid.y);
+  }
+}
+
+function drawShape(s, isSelected){
+  ctx.save();
+  ctx.strokeStyle = isSelected ? '#4fa8ff' : '#e8e8e8';
+  ctx.lineWidth=2;
+
+  if(s.type==='line'){
+    const [p0,p1]=s.points;
+    const a=worldToScreen(p0), b=worldToScreen(p1);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    drawLenLabel(p0,p1,p0.distanceTo(p1), s.id+':0');
+  } else if(s.type==='polyline'){
+    ctx.beginPath();
+    s.points.forEach((p,i)=>{ const sp=worldToScreen(p); i===0?ctx.moveTo(sp.x,sp.y):ctx.lineTo(sp.x,sp.y); });
+    ctx.stroke();
+    for(let i=0;i<s.points.length-1;i++) drawLenLabel(s.points[i],s.points[i+1],s.points[i].distanceTo(s.points[i+1]), s.id+':'+i);
+  } else if(s.type==='rect'){
+    const p=s.points;
+    ctx.beginPath();
+    p.forEach((pt,i)=>{ const sp=worldToScreen(pt); i===0?ctx.moveTo(sp.x,sp.y):ctx.lineTo(sp.x,sp.y); });
+    ctx.closePath(); ctx.stroke();
+    drawLenLabel(p[0],p[1],p[0].distanceTo(p[1]), s.id+':w');
+    drawLenLabel(p[1],p[2],p[1].distanceTo(p[2]), s.id+':h');
+  } else if(s.type==='mdf'){
+    drawMdf(s, isSelected);
+    drawLenLabel(s.points[0], s.points[1], s.points[0].distanceTo(s.points[1]), s.id+':0');
+  } else if(s.type==='dim'){
+    drawDimension(s, isSelected);
+  }
+  ctx.restore();
+}
+
+function dimGeometry(p0,p1,offsetSigned){
+  const dx=p1.x-p0.x, dy=p1.y-p0.y;
+  const len=p0.distanceTo(p1)||1;
+  const rnx=-dy/len, rny=dx/len; 
+  const disp = { x: rnx*offsetSigned, y: rny*offsetSigned };
+  const dimP0 = new Point(p0.x+disp.x, p0.y+disp.y);
+  const dimP1 = new Point(p1.x+disp.x, p1.y+disp.y);
+  const sign = offsetSigned>=0 ? 1 : -1;
+  const gap = 1.2;      
+  const overshoot = 1.8;  
+  const ext0a = new Point(p0.x+rnx*sign*gap, p0.y+rny*sign*gap);
+  const ext0b = new Point(dimP0.x+rnx*sign*overshoot, dimP0.y+rny*sign*overshoot);
+  const ext1a = new Point(p1.x+rnx*sign*gap, p1.y+rny*sign*gap);
+  const ext1b = new Point(dimP1.x+rnx*sign*overshoot, dimP1.y+rny*sign*overshoot);
+  return { dimP0, dimP1, ext0:[ext0a,ext0b], ext1:[ext1a,ext1b] };
+}
+function drawArrow(tipWorld, dirWorld){
+  const tip = worldToScreen(tipWorld);
+  const dLen = Math.hypot(dirWorld.x,dirWorld.y)||1;
+  const ux=dirWorld.x/dLen, uy=dirWorld.y/dLen;
+  const s2 = worldToScreen({x:tipWorld.x+ux, y:tipWorld.y+uy});
+  const sdx=s2.x-tip.x, sdy=s2.y-tip.y;
+  const sl=Math.hypot(sdx,sdy)||1;
+  const sux=sdx/sl, suy=sdy/sl;
+  const pux=-suy, puy=sux;
+  const aLen=11, aW=3.6;
+  const base={x:tip.x+sux*aLen, y:tip.y+suy*aLen};
+  ctx.beginPath();
+  ctx.moveTo(tip.x,tip.y);
+  ctx.lineTo(base.x+pux*aW, base.y+puy*aW);
+  ctx.lineTo(base.x-pux*aW, base.y-puy*aW);
   ctx.closePath();
   ctx.fill();
-  ctx.restore();
 }
-
-function drawSingleStroke(ctx, s, highlighted){
+function drawDimension(s, isSelected){
+  const [p0,p1] = s.points;
+  const off = s.offset;
+  const g = dimGeometry(p0,p1,off);
+  const color = isSelected ? '#4fa8ff' : '#c9cdd2';
   ctx.save();
-  if(highlighted){ ctx.shadowColor="#f59e0b"; ctx.shadowBlur=10; }
-  if(s.type==="pen"){
-    ctx.strokeStyle = s.color; ctx.lineWidth = s.width||3;
-    ctx.lineJoin="round"; ctx.lineCap="round";
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth=1.2;
+  [g.ext0,g.ext1].forEach(seg=>{
+    const a=worldToScreen(seg[0]), b=worldToScreen(seg[1]);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  });
+  const a=worldToScreen(g.dimP0), b=worldToScreen(g.dimP1);
+  ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  const dir0 = { x:g.dimP1.x-g.dimP0.x, y:g.dimP1.y-g.dimP0.y };
+  const dir1 = { x:g.dimP0.x-g.dimP1.x, y:g.dimP0.y-g.dimP1.y };
+  drawArrow(g.dimP0, dir0);
+  drawArrow(g.dimP1, dir1);
+  ctx.restore();
+  const mid = { x:(a.x+b.x)/2, y:(a.y+b.y)/2 };
+  const mm = p0.distanceTo(p1);
+  drawLabelBox(mid.x, mid.y, fmtLen(mm)+' mm', s.id+':dim', mm, false);
+}
+
+function drawInProgress(){
+  if(!drawing) return;
+  ctx.save();
+  ctx.strokeStyle='#4fa8ff'; ctx.lineWidth=2; ctx.setLineDash([]);
+
+  if(drawing.type==='line'){
+    const p0=drawing.points[0], p1=liveWorld||p0;
+    const a=worldToScreen(p0), b=worldToScreen(p1);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    drawLenLabel(p0,p1,p0.distanceTo(p1),'live',false);
+  } else if(drawing.type==='mdf'){
+    const p0=drawing.points[0], p1=liveWorld||p0;
+    drawMdf({points:[p0,p1], rawCursor:rawMouseWorld}, true);
+    drawLenLabel(p0, p1, p0.distanceTo(p1), 'live', false);
+  } else if(drawing.type==='polyline'){
     ctx.beginPath();
-    s.points.forEach((p,i)=> i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    drawing.points.forEach((p,i)=>{ const sp=worldToScreen(p); i===0?ctx.moveTo(sp.x,sp.y):ctx.lineTo(sp.x,sp.y); });
+    if(liveWorld){ const sp=worldToScreen(liveWorld); ctx.lineTo(sp.x,sp.y); }
     ctx.stroke();
-  } else if(s.type==="line"){
-    ctx.strokeStyle = highlighted?"#f59e0b":(s.color||"#111827"); ctx.lineWidth = 2.4;
-    ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
-    const mm = dist(s.x1,s.y1,s.x2,s.y2)/PX_PER_MM;
-    const mx=(s.x1+s.x2)/2, my=(s.y1+s.y2)/2;
-    ctx.font="20px sans-serif"; ctx.fillStyle="#111827";
-    ctx.textAlign="center"; ctx.textBaseline="bottom";
-    ctx.fillText(mm.toFixed(0)+" mm", mx, my-6);
-  } else if(s.type==="mdf"){
-    const thickness = 18*PX_PER_MM;
-    const dx=s.x2-s.x1, dy=s.y2-s.y1; const len=Math.hypot(dx,dy)||1;
-    const nx=-dy/len, ny=dx/len;
-    const hw=thickness/2;
+    if(liveWorld){
+      const last=drawing.points[drawing.points.length-1];
+      drawLenLabel(last,liveWorld,last.distanceTo(liveWorld),'live',false);
+    }
+  } else if(drawing.type==='rect'){
+    const p0=drawing.points[0], p1=liveWorld||p0;
+    const corners=[new Point(p0.x,p0.y), new Point(p1.x,p0.y), new Point(p1.x,p1.y), new Point(p0.x,p1.y)];
+    const sc=corners.map(worldToScreen);
     ctx.beginPath();
-    ctx.moveTo(s.x1+nx*hw, s.y1+ny*hw);
-    ctx.lineTo(s.x2+nx*hw, s.y2+ny*hw);
-    ctx.lineTo(s.x2-nx*hw, s.y2-ny*hw);
-    ctx.lineTo(s.x1-nx*hw, s.y1-ny*hw);
-    ctx.closePath();
-    ctx.fillStyle = highlighted? "rgba(245,158,11,0.55)" : "rgba(120,53,15,0.35)";
-    ctx.strokeStyle = highlighted? "#f59e0b" : "#78350f";
-    ctx.lineWidth = 2;
-    ctx.fill(); ctx.stroke();
-    const mm = dist(s.x1,s.y1,s.x2,s.y2)/PX_PER_MM;
-    const mx=(s.x1+s.x2)/2, my=(s.y1+s.y2)/2;
-    ctx.font="18px sans-serif"; ctx.fillStyle="#111827"; ctx.textAlign="center"; ctx.textBaseline="bottom";
-    ctx.fillText("18mm MDF · "+mm.toFixed(0)+"mm", mx, my-hw-6);
-  } else if(s.type==="dim"){
-    const col = highlighted? "#f59e0b" : "#dc2626";
-    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1.6;
-    ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
-    const angle = Math.atan2(s.y2-s.y1, s.x2-s.x1);
-    drawArrowHead(ctx, s.x1, s.y1, angle+Math.PI, 12);
-    drawArrowHead(ctx, s.x2, s.y2, angle, 12);
-    const mm = dist(s.x1,s.y1,s.x2,s.y2)/PX_PER_MM;
-    const mx=(s.x1+s.x2)/2, my=(s.y1+s.y2)/2;
-    ctx.save(); ctx.translate(mx,my); ctx.rotate(angle);
-    ctx.font="19px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="bottom";
-    ctx.fillText(mm.toFixed(1)+" mm", 0, -6);
-    ctx.restore();
-  } else if(s.type==="polyline"){
-    ctx.strokeStyle = highlighted?"#f59e0b":(s.color||"#111827"); ctx.lineWidth=2.4;
-    ctx.lineJoin="round";
-    ctx.beginPath();
-    s.points.forEach((p,i)=> i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-    ctx.stroke();
-    ctx.fillStyle = ctx.strokeStyle;
-    s.points.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill(); });
-  } else if(s.type==="rect"){
-    ctx.strokeStyle = highlighted?"#f59e0b":(s.color||"#111827"); ctx.lineWidth=2.4;
-    ctx.strokeRect(Math.min(s.x1,s.x2), Math.min(s.y1,s.y2), Math.abs(s.x2-s.x1), Math.abs(s.y2-s.y1));
-    const w = Math.abs(s.x2-s.x1)/PX_PER_MM, h=Math.abs(s.y2-s.y1)/PX_PER_MM;
-    ctx.font="17px sans-serif"; ctx.fillStyle="#111827"; ctx.textAlign="left"; ctx.textBaseline="top";
-    ctx.fillText(w.toFixed(0)+" x "+h.toFixed(0)+" mm", Math.min(s.x1,s.x2)+4, Math.min(s.y1,s.y2)+4);
+    sc.forEach((sp,i)=>{ i===0?ctx.moveTo(sp.x,sp.y):ctx.lineTo(sp.x,sp.y); });
+    ctx.closePath(); ctx.stroke();
+    drawLenLabel(corners[0],corners[1],corners[0].distanceTo(corners[1]),'live-w',false);
+    drawLenLabel(corners[1],corners[2],corners[1].distanceTo(corners[2]),'live-h',false);
+  } else if(drawing.type==='dim'){
+    if(drawing.stage===2 && liveWorld){
+      const a=worldToScreen(drawing.points[0]), b=worldToScreen(liveWorld);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    } else if(drawing.stage===3 && liveWorld){
+      const p0=drawing.points[0], p1=drawing.points[1];
+      const rawOff = signedOffsetFromLine(p0,p1,liveWorld);
+      const fake = { id:'draft', points:[p0,p1], offset:rawOff };
+      drawDimension(fake, true);
+    }
   }
   ctx.restore();
 }
 
-function drawStrokes(canvas, strokes, highlightIdx){
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  strokes.forEach((s,i)=> drawSingleStroke(ctx, s, i===highlightIdx));
+function signedOffsetFromLine(p0,p1,pt){
+  const dx=p1.x-p0.x, dy=p1.y-p0.y;
+  const len=p0.distanceTo(p1)||1;
+  const rnx=-dy/len, rny=dx/len;
+  return (pt.x-p0.x)*rnx + (pt.y-p0.y)*rny;
 }
 
-/* ============================================================
-   KUTU (NOT / RESİM) DOM OLUŞTURMA
-============================================================ */
-function buildBoxDOM(page, box){
-  const el = document.createElement("div");
-  el.className = "box "+(box.type==="note"?"note":"image")+(box.locked?" locked":"");
-  el.style.left = box.x+"px"; el.style.top = box.y+"px";
-  el.style.width = box.w+"px"; el.style.height = box.h+"px";
-  if(box.type==="note" && box.color) el.style.background = box.color;
-
-  const bar = document.createElement("div"); bar.className="boxBar";
-  if(box.type==="note"){
-    const okBtn = document.createElement("button"); okBtn.className="ok";
-    okBtn.textContent = box.locked ? "✎" : "✓";
-    okBtn.title = box.locked ? "Düzenle" : "Kilitle";
-    okBtn.onclick = (ev)=>{ ev.stopPropagation(); box.locked = !box.locked; refreshPage(page.id); persist(); };
-    bar.appendChild(okBtn);
-    const colorBtn = document.createElement("input");
-    colorBtn.type="color"; colorBtn.value = box.color||"#fff59d";
-    colorBtn.style.width="20px"; colorBtn.style.height="18px"; colorBtn.style.border="none"; colorBtn.style.padding="0"; colorBtn.style.background="none";
-    colorBtn.oninput = (ev)=>{ box.color=ev.target.value; el.style.background=box.color; persist(); };
-    bar.appendChild(colorBtn);
+function drawSnapAndTrack(){
+  if(hoverTrackPoint){
+    const tp = worldToScreen(hoverTrackPoint);
+    ctx.save();
+    ctx.strokeStyle = '#4fa8ff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(tp.x, tp.y, 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   }
-  const delBtn = document.createElement("button"); delBtn.className="del"; delBtn.textContent="×"; delBtn.title="Sil";
-  delBtn.onclick=(ev)=>{ ev.stopPropagation(); page.boxes = page.boxes.filter(b=>b.id!==box.id); refreshPage(page.id); persist(); };
-  bar.appendChild(delBtn);
-  el.appendChild(bar);
 
-  if(box.type==="note"){
-    const ta = document.createElement("textarea");
-    ta.value = box.text||"";
-    ta.placeholder="Not yazın...";
-    ta.readOnly = !!box.locked;
-    ta.oninput = ()=>{ box.text = ta.value; persist(); };
-    el.appendChild(ta);
+  if(snapResult && snapResult.marker){
+    const sp=worldToScreen(snapResult.point);
+    ctx.save(); 
+    ctx.strokeStyle='#ffb454'; ctx.fillStyle='#ffb454'; ctx.lineWidth=2;
+
+    if(snapResult.marker==='point'){ 
+      ctx.beginPath(); ctx.arc(sp.x, sp.y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    } else if(snapResult.marker==='track'){
+      const tp = worldToScreen(snapResult.guides[0]);
+      ctx.save(); ctx.setLineDash([5, 5]); ctx.strokeStyle='#4fa8ff'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(tp.x, tp.y); ctx.lineTo(sp.x, sp.y); ctx.stroke(); ctx.restore();
+      ctx.beginPath(); ctx.arc(sp.x, sp.y, 5, 0, Math.PI * 2); ctx.fill();
+    } else if(snapResult.marker==='mid'){ 
+      ctx.beginPath(); ctx.moveTo(sp.x,sp.y-7); ctx.lineTo(sp.x+7,sp.y+6); ctx.lineTo(sp.x-7,sp.y+6); ctx.closePath(); ctx.stroke(); 
+    } else if(snapResult.marker==='perp'){
+      ctx.beginPath(); ctx.moveTo(sp.x-8,sp.y-8); ctx.lineTo(sp.x+8,sp.y-8); ctx.lineTo(sp.x+8,sp.y+8); ctx.stroke();
+    } else { 
+      ctx.beginPath(); ctx.moveTo(sp.x-6,sp.y-6); ctx.lineTo(sp.x+6,sp.y+6); ctx.moveTo(sp.x+6,sp.y-6); ctx.lineTo(sp.x-6,sp.y+6); ctx.stroke(); 
+    }
+    ctx.restore();
+  }
+}
+
+function render(){
+  labelHitboxes=[];
+  const r=wrap.getBoundingClientRect();
+  ctx.clearRect(0,0,r.width,r.height);
+  drawGrid();
+  for(const s of shapes) drawShape(s, selectedShapes.has(s.id));
+  drawInProgress();
+  drawSnapAndTrack();
+  stZoom.textContent='Ölçek: '+Math.round(scale/3*100)+'%';
+  stMode.textContent = 'Mod: ' + tool.toUpperCase();
+}
+
+// ---------- Pointer & Dynamic Input ----------
+function getPointerType(e){ return e.pointerType||'mouse'; }
+function shouldDraw(e){
+  if(isMiddleMousePan) return false;
+  const pt=getPointerType(e);
+  if(inputMode==='pan') return false;
+  if(inputMode==='pen') return pt==='pen'||pt==='mouse';
+  return true;
+}
+function shouldPan(e){
+  if(isMiddleMousePan) return true;
+  const pt=getPointerType(e);
+  if(inputMode==='pan') return true;
+  if(inputMode==='pen') return pt==='touch';
+  return false;
+}
+function localPos(e){ const r=wrap.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+
+wrap.addEventListener('pointerdown', onPointerDown, {passive:false});
+wrap.addEventListener('pointermove', onPointerMove, {passive:false});
+wrap.addEventListener('pointerup', onPointerUp, {passive:false});
+wrap.addEventListener('pointercancel', onPointerUp, {passive:false});
+wrap.addEventListener('wheel', onWheel, {passive:false});
+
+wrap.addEventListener('contextmenu', (e)=>{
+  e.preventDefault();
+  const lp = localPos(e);
+  const world = screenToWorld(lp);
+  const hit = hitTestShape(world);
+
+  if(hit){
+    contextMenuTarget = hit;
+    selectedShapes = new Set([hit.id]);
+    render();
+    contextMenu.style.left = e.clientX + 'px';
+    contextMenu.style.top = e.clientY + 'px';
+    contextMenu.classList.add('show');
+    overlayClick.classList.add('show');
+  }
+});
+
+function onPointerDown(e){
+  if(e.button === 2) return;
+
+  if(e.button === 1){
+    e.preventDefault();
+    isMiddleMousePan = true;
+    panLast = localPos(e);
+    wrap.setPointerCapture(e.pointerId);
+    return;
+  }
+
+  e.preventDefault();
+  wrap.setPointerCapture(e.pointerId);
+  const lp=localPos(e);
+  pointers.set(e.pointerId,{x:lp.x,y:lp.y,type:getPointerType(e)});
+
+  const hitLabel = hitTestLabel(lp);
+  if(hitLabel){ openLabelEditor(hitLabel); return; }
+  closeLabelEditor();
+
+  if(pointers.size===2){ startPinch(); return; }
+
+  if(shouldPan(e)){ panLast=lp; return; }
+
+  if(shouldDraw(e)){
+    const world = screenToWorld(lp);
+    if(tool==='select'){ startSelectDrag(world, e); return; }
+    if(tool==='eraser'){ eraseAt(world); return; }
+    
+    const excludeId = drawing?drawing.id:null;
+    let pt = world;
+    if(drawing && drawing.points.length > 0){
+      const startPt = drawing.points[drawing.points.length-1];
+      pt = applyOrtho(startPt, pt);
+    }
+    const snapped = computeSnap(pt, excludeId);
+    handleDrawTap(snapped.point);
+  }
+}
+
+function onPointerMove(e){
+  const lp=localPos(e);
+  if(pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:lp.x,y:lp.y,type:getPointerType(e)});
+
+  if(pointers.size===2){ updatePinch(); render(); return; }
+
+  if(isMiddleMousePan || (panLast && shouldPan(e))){
+    offX += lp.x-panLast.x; offY += lp.y-panLast.y; panLast=lp; render(); return;
+  }
+
+  const world = screenToWorld(lp);
+  rawMouseWorld = world;
+  stCoord.textContent = 'X:'+Math.round(world.x)+' Y:'+Math.round(world.y)+' mm';
+
+  if(dragSnapshot){
+    const dx = world.x-dragSnapshot.startWorld.x;
+    const dy = world.y-dragSnapshot.startWorld.y;
+    if(Math.hypot(dx,dy)*scale > 3) dragMoved = true;
+    if(dragMoved){
+      for(const item of dragSnapshot.items){
+        const sh = shapes.find(s=>s.id===item.id);
+        if(sh) sh.points = item.points.map(p=>new Point(p.x+dx, p.y+dy));
+      }
+      render();
+    }
+    return;
+  }
+
+  if(drawing){
+    let pt = world;
+    const startForOrtho = drawing.points[drawing.points.length-1];
+    if(drawing.type!=='dim') pt = applyOrtho(startForOrtho, pt);
+    
+    const excludeId = drawing.id;
+    const snapped = computeSnap(pt, excludeId);
+    liveWorld = snapped.point; 
+    snapResult = snapped;
+
+    const liveDist = startForOrtho.distanceTo(liveWorld);
+    if(directTypedLength.length === 0){
+      directInputVal.textContent = fmtLen(liveDist);
+    }
+    directInputBox.style.display = 'block';
+
+    render();
   } else {
-    const img = document.createElement("img");
-    img.src = box.src;
-    el.appendChild(img);
+    const snapped = computeSnap(world, null);
+    snapResult = snapped;
+    render();
   }
-
-  const handle = document.createElement("div"); handle.className="resizeHandle";
-  el.appendChild(handle);
-
-  wireBoxDrag(el, bar, handle, page, box);
-  return el;
 }
 
-function wireBoxDrag(el, bar, handle, page, box){
-  let dragging=false, resizing=false, startX=0, startY=0, ox=0, oy=0, ow=0, oh=0;
-  const wrap = ()=> el.closest(".pageWrap");
-
-  function pageScale(){
-    const w = wrap();
-    const rect = w.getBoundingClientRect();
-    return { sx: CANVAS_W/rect.width, sy: CANVAS_H/rect.height };
+function onPointerUp(e){
+  if(e.button === 1 || isMiddleMousePan){
+    isMiddleMousePan = false;
+    panLast = null;
   }
+  wrap.releasePointerCapture && wrap.releasePointerCapture(e.pointerId);
+  pointers.delete(e.pointerId);
+  if(pointers.size<2) pinchStartDist=null;
+  if(pointers.size===0 && !isMiddleMousePan) panLast=null;
 
-  bar.addEventListener("pointerdown", (e)=>{
-    if(e.target.tagName==="BUTTON" || e.target.tagName==="INPUT") return;
-    dragging=true; bar.setPointerCapture(e.pointerId);
-    startX=e.clientX; startY=e.clientY; ox=box.x; oy=box.y;
-  });
-  bar.addEventListener("pointermove",(e)=>{
-    if(!dragging) return;
-    const sc = pageScale();
-    box.x = Math.max(0, ox + (e.clientX-startX)*sc.sx);
-    box.y = Math.max(0, oy + (e.clientY-startY)*sc.sy);
-    el.style.left = box.x+"px"; el.style.top = box.y+"px";
-  });
-  bar.addEventListener("pointerup",(e)=>{ if(dragging){ dragging=false; persist(); } });
-  bar.addEventListener("pointercancel",()=>{ dragging=false; });
-
-  handle.addEventListener("pointerdown",(e)=>{
-    e.stopPropagation();
-    resizing=true; handle.setPointerCapture(e.pointerId);
-    startX=e.clientX; startY=e.clientY; ow=box.w; oh=box.h;
-  });
-  handle.addEventListener("pointermove",(e)=>{
-    if(!resizing) return;
-    const sc = pageScale();
-    box.w = Math.max(60, ow + (e.clientX-startX)*sc.sx);
-    box.h = Math.max(40, oh + (e.clientY-startY)*sc.sy);
-    el.style.width = box.w+"px"; el.style.height = box.h+"px";
-  });
-  handle.addEventListener("pointerup",()=>{ if(resizing){ resizing=false; persist(); } });
-  handle.addEventListener("pointercancel",()=>{ resizing=false; });
-}
-
-/* ============================================================
-   CANVAS ÇİZİM ETKİLEŞİMİ (POINTER EVENTS)
-============================================================ */
-let drawingState = null; // {type, pageId, ink, ...}
-let polylinePoints = [];
-let activePolyPage = null;
-
-function toCanvasCoords(e, canvas){
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
-  return { x:(e.clientX-rect.left)*scaleX, y:(e.clientY-rect.top)*scaleY };
-}
-
-function findSnapPoint(page, x, y, excludeLast){
-  if(!snapOn) return null;
-  const candidates = allCandidatePoints(page.strokes, -1);
-  let best=null, bestD=SNAP_TOL;
-  candidates.forEach(p=>{
-    const d = dist(x,y,p.x,p.y);
-    if(d<bestD){ bestD=d; best=p; }
-  });
-  return best;
-}
-
-function applyOrtho(x1,y1,x2,y2){
-  const dx=Math.abs(x2-x1), dy=Math.abs(y2-y1);
-  if(dx>dy) return {x:x2,y:y1}; else return {x:x1,y:y2};
-}
-
-function hitTestStroke(s, x, y){
-  if(s.type==="pen"){
-    for(let i=1;i<s.points.length;i++){
-      if(distToSeg(x,y,s.points[i-1].x,s.points[i-1].y,s.points[i].x,s.points[i].y) < HIT_TOL) return true;
+  if(dragSnapshot){
+    if(dragMoved){
+      pushHistory();
+      autosave();
     }
-    return false;
+    dragSnapshot=null; dragMoved=false;
   }
-  if(s.type==="line"||s.type==="mdf"||s.type==="dim"){
-    return distToSeg(x,y,s.x1,s.y1,s.x2,s.y2) < HIT_TOL + (s.type==="mdf"?9*PX_PER_MM:0);
-  }
-  if(s.type==="rect"){
-    const x1=Math.min(s.x1,s.x2), x2=Math.max(s.x1,s.x2), y1=Math.min(s.y1,s.y2), y2=Math.max(s.y1,s.y2);
-    const edges=[[x1,y1,x2,y1],[x2,y1,x2,y2],[x2,y2,x1,y2],[x1,y2,x1,y1]];
-    return edges.some(ed=>distToSeg(x,y,ed[0],ed[1],ed[2],ed[3])<HIT_TOL);
-  }
-  if(s.type==="polyline"){
-    for(let i=1;i<s.points.length;i++){
-      if(distToSeg(x,y,s.points[i-1].x,s.points[i-1].y,s.points[i].x,s.points[i].y) < HIT_TOL) return true;
+}
+function onWheel(e){ e.preventDefault(); zoomAt(localPos(e), e.deltaY<0?1.1:0.9); }
+
+function startPinch(){
+  const arr=[...pointers.values()];
+  pinchStartDist=Math.hypot(arr[0].x-arr[1].x, arr[0].y-arr[1].y); pinchStartScale=scale;
+  pinchStartMid={x:(arr[0].x+arr[1].x)/2,y:(arr[0].y+arr[1].y)/2};
+  pinchStartOff={x:offX,y:offY};
+}
+function updatePinch(){
+  const arr=[...pointers.values()];
+  if(arr.length<2||!pinchStartDist) return;
+  const d=Math.hypot(arr[0].x-arr[1].x, arr[0].y-arr[1].y);
+  const newScale=Math.min(60,Math.max(0.2,pinchStartScale*(d/pinchStartDist)));
+  const worldAtMid={x:(pinchStartMid.x-pinchStartOff.x)/pinchStartScale,y:(pinchStartMid.y-pinchStartOff.y)/pinchStartScale};
+  scale=newScale;
+  offX=pinchStartMid.x-worldAtMid.x*scale;
+  offY=pinchStartMid.y-worldAtMid.y*scale;
+}
+function zoomAt(screenPt,factor){
+  const world=screenToWorld(screenPt);
+  scale=Math.min(60,Math.max(0.2,scale*factor));
+  const ns=worldToScreen(world);
+  offX += screenPt.x-ns.x; offY += screenPt.y-ns.y;
+  render();
+}
+
+// ---------- Drawing Logic ----------
+function handleDrawTap(worldPt){
+  if(tool==='line' || tool==='mdf'){
+    if(!drawing) {
+      drawing={id:'draft',type:tool,points:[worldPt]};
+      directInputBox.style.display = 'block';
+      showToast(voiceControlOn ? 'Çizim başladı. Yönü verin ve ölçüyü söyleyin.' : 'Çizim başladı. Ölçüyü yazın veya "Sesle Çiz" düğmesini açın.');
+    } else {
+      finalizeSimpleShape(worldPt);
     }
-    return false;
+  } else if(tool==='rect'){
+    if(!drawing) {
+      drawing={id:'draft',type:'rect',points:[worldPt]};
+    } else {
+      pushHistory();
+      const p0=drawing.points[0], p1=worldPt;
+      const corners=[new Point(p0.x,p0.y), new Point(p1.x,p0.y), new Point(p1.x,p1.y), new Point(p0.x,p1.y)];
+      addShape({type:'rect',points:corners});
+      drawing=null; liveWorld=null; snapResult=null; autosave();
+    }
+  } else if(tool==='polyline'){
+    if(!drawing) drawing={id:'draft',type:'polyline',points:[worldPt]};
+    else{
+      const last=drawing.points[drawing.points.length-1];
+      if(last.distanceTo(worldPt)<0.01) return;
+      drawing.points.push(worldPt);
+    }
+  } else if(tool==='dim'){
+    if(!drawing){ drawing={id:'draft',type:'dim',points:[worldPt],stage:2}; }
+    else if(drawing.stage===2){ drawing.points.push(worldPt); drawing.stage=3; }
+    else if(drawing.stage===3){
+      pushHistory();
+      const p0=drawing.points[0], p1=drawing.points[1];
+      const off = signedOffsetFromLine(p0,p1,worldPt);
+      addShape({type:'dim', points:[p0,p1], offset: off===0?8:off});
+      drawing=null; liveWorld=null; snapResult=null; autosave();
+    }
+  }
+  render();
+}
+
+function finalizeSimpleShape(secondPt){
+  const p0=drawing.points[0];
+  if(p0.distanceTo(secondPt)<0.5){ drawing=null; liveWorld=null; snapResult=null; resetDirectInput(); render(); return; }
+  pushHistory();
+  addShape({type:drawing.type, points:[p0,secondPt], rawCursor: rawMouseWorld, label: '', note: ''});
+  drawing=null; liveWorld=null; snapResult=null; resetDirectInput(); autosave();
+  showToast(tool.toUpperCase() + ' tamamlandı.');
+}
+function addShape(partial){ const s={id:uid(),...partial}; shapes.push(s); return s; }
+function finishPolyline(){
+  if(drawing && drawing.type==='polyline' && drawing.points.length>=2){
+    pushHistory();
+    addShape({type:'polyline',points:drawing.points.slice()}); autosave();
+  }
+  drawing=null; liveWorld=null; snapResult=null; resetDirectInput(); render();
+}
+
+wrap.addEventListener('dblclick', (e)=>{ 
+  if(drawing && drawing.type==='polyline'){ finishPolyline(); return; }
+
+  const lp = localPos(e);
+  const world = screenToWorld(lp);
+  const hit = hitTestShape(world);
+
+  if(hit && hit.type === 'mdf'){
+    promptShapeLabel(hit);
+  }
+});
+
+function promptShapeLabel(s){
+  const newLabel = prompt("MDF Parça İsmini Giriniz:", s.label || "Yan Dikme");
+  if(newLabel !== null){
+    const newNote = prompt("Excel Sütununda Görünecek Açıklama/Notu Giriniz:", s.note || "");
+    pushHistory();
+    s.label = newLabel.trim();
+    if(newNote !== null) s.note = newNote.trim();
+    autosave();
+    render();
+  }
+}
+
+// Klavye Değer Girişi
+window.addEventListener('keydown',(e)=>{
+  if(e.target.tagName === 'INPUT') return;
+
+  if(e.key==='Enter'){
+    if(drawing && directTypedLength.length > 0){
+      commitDirectTypedLength();
+      return;
+    }
+    if(drawing && drawing.type==='polyline') finishPolyline();
+  }
+
+  if(e.key==='Escape'){ 
+    drawing=null; liveWorld=null; snapResult=null; dragSnapshot=null; hoverTrackPoint=null; resetDirectInput(); render(); 
+  }
+
+  if((e.ctrlKey || e.metaKey) && e.key==='z'){ undo(); }
+
+  if(drawing && (drawing.type==='line' || drawing.type==='mdf')){
+    if((e.key >= '0' && e.key <= '9') || e.key === '.' || e.key === ','){
+      const char = e.key === ',' ? '.' : e.key;
+      directTypedLength += char;
+      updateDirectInputUI();
+    } else if(e.key === 'Backspace'){
+      directTypedLength = directTypedLength.slice(0, -1);
+      updateDirectInputUI();
+    }
+  }
+});
+
+function updateDirectInputUI(){
+  if(directTypedLength.length > 0){
+    directInputVal.textContent = directTypedLength;
+  } else if(drawing && liveWorld){
+    const p0 = drawing.points[0];
+    directInputVal.textContent = fmtLen(p0.distanceTo(liveWorld));
+  }
+}
+
+function resetDirectInput(){
+  directTypedLength = "";
+  directInputBox.style.display = 'none';
+}
+
+function commitDirectTypedLength(){
+  const mmVal = parseFloat(directTypedLength);
+  if(!isNaN(mmVal) && mmVal > 0 && drawing && liveWorld){
+    const p0 = drawing.points[0];
+    const dx = liveWorld.x - p0.x, dy = liveWorld.y - p0.y;
+    const angle = Math.atan2(dy, dx);
+    const targetPt = new Point(
+      p0.x + Math.cos(angle) * mmVal,
+      p0.y + Math.sin(angle) * mmVal
+    );
+    finalizeSimpleShape(targetPt);
+  }
+  resetDirectInput();
+}
+
+// ---------- Hit testing shapes ----------
+function hitTestShape(worldPt){
+  const tol=12/scale; 
+  for(let i=shapes.length-1;i>=0;i--){
+    const s=shapes[i];
+    if(s.type==='line'){
+      if(worldPt.distanceToSegment(s.points[0], s.points[1]) < tol) return s;
+    } else if(s.type==='mdf'){
+      const c = getMdfCorners(s.points[0], s.points[1], s.rawCursor);
+      for(let j=0; j<4; j++){
+        if(worldPt.distanceToSegment(c[j], c[(j+1)%4]) < tol) return s;
+      }
+    } else if(s.type==='polyline'){
+      for(let j=0;j<s.points.length-1;j++) if(worldPt.distanceToSegment(s.points[j], s.points[j+1]) < tol) return s;
+    } else if(s.type==='rect'){
+      const p=s.points;
+      for(let j=0;j<4;j++) if(worldPt.distanceToSegment(p[j], p[(j+1)%4]) < tol) return s;
+    } else if(s.type==='dim'){
+      const g=dimGeometry(s.points[0],s.points[1],s.offset);
+      if(worldPt.distanceToSegment(g.dimP0, g.dimP1) < tol) return s;
+    }
+  }
+  return null;
+}
+
+// ---------- Select / Drag / Erase ----------
+function startSelectDrag(world, e){
+  const hit = hitTestShape(world);
+  if(hit){
+    if(multiSelect){
+      if(selectedShapes.has(hit.id)) selectedShapes.delete(hit.id); else selectedShapes.add(hit.id);
+    } else if(!selectedShapes.has(hit.id)){
+      selectedShapes = new Set([hit.id]);
+    }
+    const items = [...selectedShapes].map(id=>{
+      const sh = shapes.find(s=>s.id===id);
+      return { id, points: sh.points.map(p=>new Point(p.x, p.y)) };
+    });
+    dragSnapshot = { startWorld: world, items };
+    dragMoved = false;
+  } else {
+    if(!multiSelect) selectedShapes = new Set();
+  }
+  render();
+}
+
+function eraseAt(world){
+  const hit = hitTestShape(world);
+  if(hit){
+    pushHistory();
+    shapes = shapes.filter(s=>s.id !== hit.id);
+    selectedShapes.delete(hit.id);
+    autosave(); 
+    render();
+    showToast('Öğe silindi');
+  }
+}
+
+function deleteSelected(){
+  if(!selectedShapes.size){ showToast('Önce bir öğe seçin'); return; }
+  pushHistory();
+  shapes = shapes.filter(s=>!selectedShapes.has(s.id));
+  selectedShapes=new Set(); autosave(); render();
+  showToast('Seçilenler silindi');
+}
+function copySelected(){
+  if(!selectedShapes.size){ showToast('Önce bir öğe seçin'); return; }
+  clipboard = [...selectedShapes].map(id=>{
+    const s = shapes.find(x=>x.id===id);
+    return { type:s.type, points:s.points.map(p=>new Point(p.x, p.y)), offset:s.offset, rawCursor:s.rawCursor, label:s.label, note:s.note };
+  });
+  pasteOffset = 0;
+  showToast('Kopyalandı ('+clipboard.length+')');
+}
+function pasteClipboard(){
+  if(!clipboard.length){ showToast('Panoda öğe yok'); return; }
+  pushHistory();
+  pasteOffset += 20;
+  const newIds = new Set();
+  for(const c of clipboard){
+    const pts = c.points.map(p=>new Point(p.x+pasteOffset, p.y+pasteOffset));
+    const s = addShape({ type:c.type, points:pts, offset:c.offset, rawCursor:c.rawCursor, label:c.label, note:c.note });
+    newIds.add(s.id);
+  }
+  selectedShapes = newIds;
+  autosave(); render();
+  showToast('Yapıştırıldı');
+}
+
+// ---------- Label editing ----------
+function hitTestLabel(lp){
+  for(const h of labelHitboxes) if(lp.x>=h.x && lp.x<=h.x+h.w && lp.y>=h.y && lp.y<=h.y+h.h) return h;
+  return null;
+}
+function openLabelEditor(hit){
+  editingLabel = { key: hit.key, mm: hit.mm };
+  lenInput.style.display='block';
+  lenInput.style.left=hit.x+'px'; lenInput.style.top=(hit.y-30)+'px';
+  lenInput.style.width=Math.max(70,hit.w)+'px';
+  lenInput.value = fmtLen(hit.mm);
+  lenInput.focus(); lenInput.select();
+  render();
+}
+function closeLabelEditor(){ if(!editingLabel) return; editingLabel=null; lenInput.style.display='none'; }
+lenInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter') commitLabelEdit(); if(e.key==='Escape') closeLabelEditor(); });
+lenInput.addEventListener('blur', commitLabelEdit);
+function commitLabelEdit(){
+  if(!editingLabel) return;
+  const val = parseFloat(lenInput.value.replace(',','.'));
+  const key = editingLabel.key;
+  lenInput.style.display='none';
+  editingLabel=null;
+  if(!val || val<=0){ render(); return; }
+  pushHistory();
+  applyLengthEdit(key,val); autosave(); render();
+}
+function applyLengthEdit(key,newMm){
+  const [idStr,seg]=key.split(':');
+  const id=parseInt(idStr,10);
+  const s=shapes.find(sh=>sh.id===id);
+  if(!s) return;
+  if(s.type==='line'||s.type==='mdf'){
+    const [p0,p1]=s.points; const d=p0.distanceTo(p1)||1;
+    const ux=(p1.x-p0.x)/d, uy=(p1.y-p0.y)/d;
+    s.points[1]=new Point(p0.x+ux*newMm, p0.y+uy*newMm);
+  } else if(s.type==='polyline'){
+    const i=parseInt(seg,10);
+    const p0=s.points[i], p1=s.points[i+1]; const d=p0.distanceTo(p1)||1;
+    const ux=(p1.x-p0.x)/d, uy=(p1.y-p0.y)/d;
+    s.points[i+1]=new Point(p0.x+ux*newMm, p0.y+uy*newMm);
+  } else if(s.type==='rect'){
+    const p=s.points;
+    if(seg==='w'){ const dirx=p[1].x>=p[0].x?1:-1; p[1].x=p[0].x+dirx*newMm; p[2].x=p[1].x; }
+    else if(seg==='h'){ const diry=p[2].y>=p[1].y?1:-1; p[2].y=p[1].y+diry*newMm; p[3].y=p[2].y; }
+  }
+}
+
+// ---------- Popover & Context Menu ----------
+function openMenu(anchorEl, items){
+  popover.innerHTML='';
+  items.forEach(it=>{
+    const b=document.createElement('button');
+    b.className='pbtn'+(it.active?' active':'');
+    b.innerHTML = '<span class="ic">'+it.icon+'</span><span>'+it.label+'</span>';
+    b.addEventListener('click',(ev)=>{ 
+      ev.stopPropagation(); 
+      it.onClick(b); 
+      if(!it.keepOpen) closeMenu(); 
+    });
+    popover.appendChild(b);
+  });
+  const r = anchorEl.getBoundingClientRect();
+  popover.style.display='flex';
+  popover.classList.add('show');
+  const pw = 210;
+  let left = r.left;
+  if(left+pw > window.innerWidth-8) left = window.innerWidth-pw-8;
+  popover.style.left = Math.max(6,left)+'px';
+  popover.style.top = (r.bottom+6)+'px';
+  overlayClick.classList.add('show');
+}
+function closeMenu(){
+  popover.classList.remove('show'); popover.style.display='none';
+  contextMenu.classList.remove('show'); contextMenu.style.display='none';
+  overlayClick.classList.remove('show');
+}
+overlayClick.addEventListener('pointerdown', closeMenu);
+
+document.getElementById('cmLabel').addEventListener('click', ()=>{
+  closeMenu();
+  if(contextMenuTarget && contextMenuTarget.type==='mdf') promptShapeLabel(contextMenuTarget);
+});
+document.getElementById('cmEditLen').addEventListener('click', ()=>{
+  closeMenu();
+  if(contextMenuTarget){
+    const curLen = contextMenuTarget.points[0].distanceTo(contextMenuTarget.points[1]);
+    const valStr = prompt("Yeni Uzunluk Değerini Giriniz (mm):", fmtLen(curLen));
+    if(valStr){
+      const val = parseFloat(valStr.replace(',','.'));
+      if(val && val>0){
+        pushHistory();
+        applyLengthEdit(contextMenuTarget.id+':0', val);
+        autosave(); render();
+      }
+    }
+  }
+});
+document.getElementById('cmRotate').addEventListener('click', ()=>{
+  closeMenu();
+  if(contextMenuTarget){
+    pushHistory();
+    const p0 = contextMenuTarget.points[0];
+    const p1 = contextMenuTarget.points[1];
+    const dx = p1.x - p0.x, dy = p1.y - p0.y;
+    contextMenuTarget.points[1] = new Point(p0.x - dy, p0.y + dx);
+    autosave(); render();
+  }
+});
+document.getElementById('cmCopy').addEventListener('click', ()=>{ closeMenu(); copySelected(); });
+document.getElementById('cmDelete').addEventListener('click', ()=>{ closeMenu(); deleteSelected(); });
+
+// ---------- Toolbar Wiring ----------
+const drawIcons = { select:'↖', line:'╱', polyline:'⌇', rect:'▭', mdf:'▬' };
+function setTool(t){
+  tool=t; drawing=null; liveWorld=null; snapResult=null; dragSnapshot=null; hoverTrackPoint=null; resetDirectInput();
+  document.getElementById('grpDrawIcon').textContent = drawIcons[t] || '↖';
+  document.getElementById('grpDraw').classList.toggle('active', ['select','line','polyline','rect','mdf'].includes(t));
+  document.getElementById('toolDim').classList.toggle('active', t==='dim');
+  document.getElementById('btnEraser').classList.toggle('active', t==='eraser');
+  showToast('Aktif Araç: ' + t.toUpperCase());
+  render();
+}
+
+document.getElementById('grpDraw').addEventListener('click', function(){
+  openMenu(this, [
+    {icon:drawIcons.select, label:'Seç', active:tool==='select', onClick:()=>setTool('select')},
+    {icon:drawIcons.mdf, label:'MDF 18mm', active:tool==='mdf', onClick:()=>setTool('mdf')},
+    {icon:drawIcons.line, label:'Çizgi', active:tool==='line', onClick:()=>setTool('line')},
+    {icon:drawIcons.polyline, label:'Polyline', active:tool==='polyline', onClick:()=>setTool('polyline')},
+    {icon:drawIcons.rect, label:'Dikdörtgen', active:tool==='rect', onClick:()=>setTool('rect')},
+  ]);
+});
+
+document.getElementById('grpEdit').addEventListener('click', function(){
+  openMenu(this, [
+    {icon:'🧹', label:'Silgi (dokun-sil)', active:tool==='eraser', onClick:()=>setTool('eraser')},
+    {icon: multiSelect?'☑':'☐', label:'Çoklu seçim', keepOpen:true, onClick:(btnEl)=>{ 
+      multiSelect=!multiSelect; 
+      btnEl.querySelector('.ic').textContent = multiSelect ? '☑' : '☐';
+      showToast(multiSelect?'Çoklu seçim açık':'Çoklu seçim kapalı'); 
+    }},
+    {icon:'📋', label:'Kopyala', onClick:copySelected},
+    {icon:'📌', label:'Yapıştır', onClick:pasteClipboard},
+    {icon:'🗑️', label:'Seçileni sil', onClick:deleteSelected},
+  ]);
+});
+
+document.getElementById('btnEraser').addEventListener('click', ()=>setTool(tool==='eraser'?'select':'eraser'));
+document.getElementById('btnUndo').addEventListener('click', undo);
+document.getElementById('toolDim').addEventListener('click', ()=>setTool(tool==='dim'?'select':'dim'));
+
+btnVoiceToggle.addEventListener('click', ()=>{
+  voiceControlOn = !voiceControlOn;
+  btnVoiceToggle.classList.toggle('on', voiceControlOn);
+  if(voiceControlOn){
+    startVoiceRecognition();
+  } else {
+    stopVoiceRecognition();
+    showToast('Sesli Ölçü Kapalı');
+  }
+});
+
+const btnOrtho=document.getElementById('btnOrtho');
+btnOrtho.addEventListener('click', ()=>{ orthoOn=!orthoOn; btnOrtho.classList.toggle('on',orthoOn); });
+const btnSnap=document.getElementById('btnSnap');
+btnSnap.addEventListener('click', ()=>{ snapOn=!snapOn; btnSnap.classList.toggle('on',snapOn); });
+
+document.getElementById('btnSnapMenu').addEventListener('click', function(){
+  openMenu(this, [
+    {
+      icon: snapSettings.tracking ? '☑' : '☐', 
+      label: 'Object Tracking (Kesikli Hiza)', 
+      keepOpen: true, 
+      onClick: function(btnEl){ 
+        snapSettings.tracking = !snapSettings.tracking; 
+        btnEl.querySelector('.ic').textContent = snapSettings.tracking ? '☑' : '☐';
+        render(); 
+      }
+    },
+    {
+      icon: snapSettings.pointSnap ? '☑' : '☐', 
+      label: 'Point Snap (Kesişim/Nokta)', 
+      keepOpen: true, 
+      onClick: function(btnEl){ 
+        snapSettings.pointSnap = !snapSettings.pointSnap; 
+        btnEl.querySelector('.ic').textContent = snapSettings.pointSnap ? '☑' : '☐';
+        render(); 
+      }
+    },
+    {
+      icon: snapSettings.endpoint ? '☑' : '☐', 
+      label: 'Endpoint (Uç Nokta)', 
+      keepOpen: true, 
+      onClick: function(btnEl){ 
+        snapSettings.endpoint = !snapSettings.endpoint; 
+        btnEl.querySelector('.ic').textContent = snapSettings.endpoint ? '☑' : '☐';
+        render(); 
+      }
+    },
+    {
+      icon: snapSettings.midpoint ? '☑' : '☐', 
+      label: 'Midpoint (Orta Nokta)', 
+      keepOpen: true, 
+      onClick: function(btnEl){ 
+        snapSettings.midpoint = !snapSettings.midpoint; 
+        btnEl.querySelector('.ic').textContent = snapSettings.midpoint ? '☑' : '☐';
+        render(); 
+      }
+    },
+    {
+      icon: snapSettings.perpendicular ? '☑' : '☐', 
+      label: 'Perpendicular (Dik Yakalama)', 
+      keepOpen: true, 
+      onClick: function(btnEl){ 
+        snapSettings.perpendicular = !snapSettings.perpendicular; 
+        btnEl.querySelector('.ic').textContent = snapSettings.perpendicular ? '☑' : '☐';
+        render(); 
+      }
+    },
+    {
+      icon: snapSettings.grid ? '☑' : '☐', 
+      label: 'Izgara / Grid Snap', 
+      keepOpen: true, 
+      onClick: function(btnEl){ 
+        snapSettings.grid = !snapSettings.grid; 
+        btnEl.querySelector('.ic').textContent = snapSettings.grid ? '☑' : '☐';
+        render(); 
+      }
+    }
+  ]);
+});
+
+document.getElementById('grpView').addEventListener('click', function(){
+  openMenu(this, [
+    {icon:'⛶', label:'Sığdır', onClick:fitToView},
+    {icon:'＋', label:'Yakınlaştır', keepOpen:true, onClick:()=>{ const r=wrap.getBoundingClientRect(); zoomAt({x:r.width/2,y:r.height/2},1.25); }},
+    {icon:'－', label:'Uzaklaştır', keepOpen:true, onClick:()=>{ const r=wrap.getBoundingClientRect(); zoomAt({x:r.width/2,y:r.height/2},0.8); }},
+  ]);
+});
+
+document.getElementById('grpFile').addEventListener('click', function(){
+  openMenu(this, [
+    {icon:'💾', label:'Kaydet', onClick:()=>save(true)},
+    {icon:'📊', label:'MDF Kesim Listesi Aktar (.csv)', onClick:exportMdfCsv},
+    {icon:'🗎', label:'Yeni', onClick:()=>{
+      if(shapes.length && !confirm('Yeni çizim başlatılsın mı? Kaydedilmemiş değişiklikler kaybolur.')) return;
+      pushHistory();
+      shapes=[]; drawing=null; selectedShapes=new Set(); offX=40; offY=40; scale=3; autosave(); render();
+    }},
+    {icon:'📄', label:'PDF dışa aktar', onClick:exportPdf},
+  ]);
+});
+
+const inputIcons={pen:'🖊️',hand:'✋',pan:'🖐️'};
+document.getElementById('grpInput').addEventListener('click', function(){
+  openMenu(this, [
+    {icon:'🖊️', label:'Kalem (S Pen çizer)', active:inputMode==='pen', onClick:()=>setInputMode('pen')},
+    {icon:'✋', label:'El (parmak da çizer)', active:inputMode==='hand', onClick:()=>setInputMode('hand')},
+    {icon:'🖐️', label:'Kaydır (sadece pan)', active:inputMode==='pan', onClick:()=>setInputMode('pan')},
+  ]);
+});
+function setInputMode(m){ inputMode=m; document.getElementById('grpInputIcon').textContent=inputIcons[m]; }
+
+function fitToView(){
+  if(shapes.length===0){ scale=3; offX=40; offY=40; render(); return; }
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const s of shapes) for(const p of s.points){ minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y); }
+  const r=wrap.getBoundingClientRect(); const pad=60;
+  const w=Math.max(1,maxX-minX), h=Math.max(1,maxY-minY);
+  scale=Math.min((r.width-pad*2)/w,(r.height-pad*2)/h,60); scale=Math.max(scale,0.2);
+  offX=pad-minX*scale+(r.width-pad*2-w*scale)/2;
+  offY=pad-minY*scale+(r.height-pad*2-h*scale)/2;
+  render();
+}
+
+// ---------- Point Tabanlı Kenar Çakışma ve Bant Formülü ----------
+function isEdgeClosed(pA, pB, currentMdfId){
+  const tol = 1.0; 
+  for(const s of shapes){
+    if(s.type !== 'mdf' || s.id === currentMdfId) continue;
+    const corners = getMdfCorners(s.points[0], s.points[1], s.rawCursor);
+    for(let i=0; i<4; i++){
+      const c1 = corners[i], c2 = corners[(i+1)%4];
+      if(pA.distanceToSegment(c1, c2) < tol && pB.distanceToSegment(c1, c2) < tol){
+        return true; 
+      }
+    }
   }
   return false;
 }
 
-function wirePagePointer(wrap, ink, page){
-  let pendingPen = null;
+// ---------- CSV / E-Tablo Dışa Aktarma ----------
+function exportMdfCsv(){
+  const mdfShapes = shapes.filter(s => s.type === 'mdf');
+  if(mdfShapes.length === 0){
+    showToast('Çizimde MDF parçası bulunamadı!');
+    return;
+  }
 
-  ink.addEventListener("pointerdown",(e)=>{
-    ink.setPointerCapture(e.pointerId);
-    let {x,y} = toCanvasCoords(e, ink);
-    const snap = findSnapPoint(page,x,y);
-    if(snap){ x=snap.x; y=snap.y; }
+  const depthStr = prompt('Lütfen MDF parçaları için Derinlik Değerini giriniz (mm):', '350');
+  if(depthStr === null) return;
+  
+  const depthVal = parseFloat(depthStr.replace(',', '.'));
+  if(isNaN(depthVal) || depthVal <= 0){
+    showToast('Geçersiz derinlik değeri girdiniz!');
+    return;
+  }
 
-    if(activeTool==="pen"){
-      pendingPen = { type:"pen", color:penColor, width:3, points:[{x,y}] };
-    } else if(activeTool==="eraser"){
-      eraseAt(page, x, y);
-    } else if(activeTool==="line" || activeTool==="mdf" || activeTool==="dim" || activeTool==="rect"){
-      drawingState = { type:activeTool, pageId:page.id, x1:x,y1:y,x2:x,y2:y };
-    } else if(activeTool==="polyline"){
-      if(activePolyPage !== page.id){ polylinePoints = []; activePolyPage = page.id; }
-      polylinePoints.push({x,y});
-      document.getElementById("finishPolyBtn").style.display = polylinePoints.length>=2 ? "inline-block":"none";
-      redrawWithPreview(page, ink);
-    } else if(activeTool==="select"){
-      let found=-1;
-      for(let i=page.strokes.length-1;i>=0;i--){ if(hitTestStroke(page.strokes[i],x,y)){ found=i; break; } }
-      if(found>=0){
-        selection = {pageId:page.id, index:found};
-        selection.dragStart = {x,y};
-        selection.strokeSnapshot = JSON.parse(JSON.stringify(page.strokes[found]));
-      } else {
-        selection = null;
-      }
-      drawStrokes(ink, page.strokes, selection && selection.pageId===page.id ? selection.index : -1);
+  const groups = new Map();
+
+  mdfShapes.forEach((s) => {
+    const length = Math.round(s.points[0].distanceTo(s.points[1]) * 10) / 10;
+    const label = s.label || "MDF Parça";
+    const note = s.note || "";
+    
+    const corners = getMdfCorners(s.points[0], s.points[1], s.rawCursor);
+    
+    const boyFrontClosed = isEdgeClosed(corners[0], corners[1], s.id);
+    const derSolClosed = isEdgeClosed(corners[3], corners[0], s.id);
+    const derSagClosed = isEdgeClosed(corners[1], corners[2], s.id);
+
+    const frontBoyBant = boyFrontClosed ? "" : "1";
+    const rearBoyBant = ""; 
+    const solDerBant = derSolClosed ? "" : "1";
+    const sagDerBant = derSagClosed ? "" : "1";
+
+    const key = `${label}|${length}|${depthVal}|${frontBoyBant}|${rearBoyBant}|${solDerBant}|${sagDerBant}|${note}`;
+
+    if(groups.has(key)){
+      const item = groups.get(key);
+      item.count += 1;
+    } else {
+      groups.set(key, {
+        label,
+        count: 1,
+        length,
+        depth: depthVal,
+        frontBoyBant,
+        rearBoyBant,
+        solDerBant,
+        sagDerBant,
+        note
+      });
     }
   });
 
-  ink.addEventListener("pointermove",(e)=>{
-    let {x,y} = toCanvasCoords(e, ink);
-    const snap = findSnapPoint(page,x,y);
-    const guideEl = null;
-    if(snap){ x=snap.x; y=snap.y; }
-
-    if(activeTool==="pen" && pendingPen){
-      pendingPen.points.push({x,y});
-      drawStrokes(ink, page.strokes);
-      drawSingleStroke(ink.getContext("2d"), pendingPen, false);
-    } else if(drawingState && drawingState.pageId===page.id){
-      let x2=x, y2=y;
-      if(orthoOn || drawingState.type==="mdf"){
-        const o = applyOrtho(drawingState.x1, drawingState.y1, x2, y2);
-        x2=o.x; y2=o.y;
-      }
-      drawingState.x2=x2; drawingState.y2=y2;
-      drawStrokes(ink, page.strokes);
-      drawSingleStroke(ink.getContext("2d"), drawingState, false);
-    } else if(activeTool==="polyline" && activePolyPage===page.id && polylinePoints.length){
-      let lx=x, ly=y;
-      if(orthoOn && polylinePoints.length){
-        const last = polylinePoints[polylinePoints.length-1];
-        const o = applyOrtho(last.x,last.y,x,y); lx=o.x; ly=o.y;
-      }
-      redrawWithPreview(page, ink, {x:lx,y:ly});
-    } else if(activeTool==="select" && selection && selection.pageId===page.id && selection.dragStart){
-      const dx = x - selection.dragStart.x, dy = y - selection.dragStart.y;
-      moveStroke(selection.strokeSnapshot, page.strokes[selection.index], dx, dy);
-      drawStrokes(ink, page.strokes, selection.index);
-    }
+  let csvContent = "Sıra No;Parça Adı;Adet;Boy (mm);Derinlik (mm);Ön Boy Bant;Arka Boy Bant;Sol Derinlik Bant;Sağ Derinlik Bant;Açıklama\n";
+  
+  let rowIdx = 1;
+  groups.forEach((g) => {
+    csvContent += `${rowIdx};${g.label};${g.count};${fmtLen(g.length)};${fmtLen(g.depth)};${g.frontBoyBant};${g.rearBoyBant};${g.solDerBant};${g.sagDerBant};${g.note}\n`;
+    rowIdx++;
   });
 
-  function finishPointer(e){
-    if(activeTool==="pen" && pendingPen){
-      if(pendingPen.points.length>1) page.strokes.push(pendingPen);
-      pendingPen=null;
-      drawStrokes(ink, page.strokes);
-      persist();
-    } else if(drawingState && drawingState.pageId===page.id){
-      const s = drawingState; drawingState=null;
-      if(dist(s.x1,s.y1,s.x2,s.y2) > 4){
-        page.strokes.push({type:s.type, x1:s.x1,y1:s.y1,x2:s.x2,y2:s.y2, color: s.type==="line"?penColor:undefined});
-      }
-      drawStrokes(ink, page.strokes);
-      persist();
-    } else if(activeTool==="select" && selection && selection.pageId===page.id && selection.dragStart){
-      selection.dragStart=null; selection.strokeSnapshot=null;
-      persist();
-    }
-  }
-  ink.addEventListener("pointerup", finishPointer);
-  ink.addEventListener("pointercancel", finishPointer);
+  const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `MDF_Kesim_ve_Bant_Listesi_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast(`${groups.size} satır kesim listesi Excel olarak aktarıldı.`);
 }
 
-function moveStroke(orig, target, dx, dy){
-  if(orig.type==="pen"){
-    target.points = orig.points.map(p=>({x:p.x+dx,y:p.y+dy}));
-  } else if(orig.type==="polyline"){
-    target.points = orig.points.map(p=>({x:p.x+dx,y:p.y+dy}));
-  } else if(orig.x1!==undefined){
-    target.x1=orig.x1+dx; target.y1=orig.y1+dy; target.x2=orig.x2+dx; target.y2=orig.y2+dy;
-  }
-}
-
-function redrawWithPreview(page, ink, previewPoint){
-  drawStrokes(ink, page.strokes);
-  if(polylinePoints.length){
-    const pts = previewPoint ? polylinePoints.concat([previewPoint]) : polylinePoints;
-    drawSingleStroke(ink.getContext("2d"), {type:"polyline", points:pts, color:penColor}, false);
-  }
-}
-
-function eraseAt(page, x, y){
-  const before = page.strokes.length;
-  page.strokes = page.strokes.filter(s=> !hitTestStroke(s,x,y));
-  if(page.strokes.length!==before){
-    refreshPage(page.id);
-    persist();
-  }
-}
-
-function finishPolyline(){
-  if(activePolyPage && polylinePoints.length>=2){
-    const page = dayData.pages.find(p=>p.id===activePolyPage);
-    if(page){
-      page.strokes.push({type:"polyline", points:polylinePoints.slice(), color:penColor});
-      refreshPage(page.id);
-      persist();
-    }
-  }
-  polylinePoints=[]; activePolyPage=null;
-  document.getElementById("finishPolyBtn").style.display="none";
-}
-
-/* ============================================================
-   ARAÇ ÇUBUĞU OLAYLARI
-============================================================ */
-document.querySelectorAll(".tool[data-tool]").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    if(activePolyPage && activeTool==="polyline" && btn.dataset.tool!=="polyline"){ finishPolyline(); }
-    activeTool = btn.dataset.tool;
-    document.querySelectorAll(".tool[data-tool]").forEach(b=>b.classList.toggle("active", b===btn));
-    document.getElementById("finishPolyBtn").style.display = (activeTool==="polyline" && polylinePoints.length>=2) ? "inline-block":"none";
-  });
-});
-document.querySelector('.tool[data-tool="pen"]').classList.add("active");
-
-document.getElementById("penColor").addEventListener("input", e=> penColor = e.target.value);
-
-document.getElementById("orthoBtn").addEventListener("click", function(){
-  orthoOn = !orthoOn; this.classList.toggle("on", orthoOn);
-});
-document.getElementById("snapBtn").addEventListener("click", function(){
-  snapOn = !snapOn; this.classList.toggle("on", snapOn);
-});
-document.getElementById("finishPolyBtn").addEventListener("click", finishPolyline);
-
-document.getElementById("deleteSelBtn").addEventListener("click", ()=>{
-  if(!selection) { showToast("Önce bir çizgi seçin"); return; }
-  const page = dayData.pages.find(p=>p.id===selection.pageId);
-  if(page){ page.strokes.splice(selection.index,1); selection=null; refreshPage(page.id); persist(); }
-});
-document.getElementById("copySelBtn").addEventListener("click", ()=>{
-  if(!selection) { showToast("Önce bir çizgi seçin"); return; }
-  const page = dayData.pages.find(p=>p.id===selection.pageId);
-  if(page){ clipboardStroke = JSON.parse(JSON.stringify(page.strokes[selection.index])); showToast("Kopyalandı"); }
-});
-document.getElementById("pasteSelBtn").addEventListener("click", ()=>{
-  if(!clipboardStroke){ showToast("Panoda çizgi yok"); return; }
-  const pageId = selection ? selection.pageId : (dayData.pages[0] && dayData.pages[0].id);
-  const page = dayData.pages.find(p=>p.id===pageId);
-  if(!page) return;
-  const clone = JSON.parse(JSON.stringify(clipboardStroke));
-  moveStroke(clone, clone, 24, 24);
-  page.strokes.push(clone);
-  refreshPage(page.id); persist();
-});
-
-document.getElementById("themeSelect").addEventListener("change", (e)=>{
-  const page = currentVisiblePage();
-  if(page){ page.theme = e.target.value; refreshPage(page.id); persist(); }
-});
-document.getElementById("gridSelect").addEventListener("change", (e)=>{
-  const page = currentVisiblePage();
-  if(page){ page.gridSize = Number(e.target.value); refreshPage(page.id); persist(); }
-});
-function currentVisiblePage(){
-  return selection ? dayData.pages.find(p=>p.id===selection.pageId) : dayData.pages[dayData.pages.length-1];
-}
-
-/* ---------- Fotoğraf ekleme ---------- */
-document.getElementById("addPhotoBtn").addEventListener("click", ()=> document.getElementById("fileInputPhoto").click());
-document.getElementById("fileInputPhoto").addEventListener("change", (e)=>{
-  const files = Array.from(e.target.files||[]);
-  const page = dayData.pages[dayData.pages.length-1];
-  let offset = 0;
-  files.forEach(file=>{
-    const reader = new FileReader();
-    reader.onload = (ev)=>{
-      const img = new Image();
-      img.onload = ()=>{
-        const canvas = document.createElement("canvas");
-        const maxW = 1000;
-        const scale = Math.min(1, maxW/img.width);
-        canvas.width = img.width*scale; canvas.height = img.height*scale;
-        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg",0.75);
-        page.boxes.push({ id:uid(), type:"image", x:60+offset, y:80+offset, w:280, h:210, src:dataUrl, locked:false });
-        offset += 24;
-        refreshPage(page.id); persist();
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-  e.target.value = "";
-});
-
-/* ---------- Not ekleme ---------- */
-document.getElementById("addNoteBtn").addEventListener("click", ()=>{
-  const page = dayData.pages[dayData.pages.length-1];
-  page.boxes.push({ id:uid(), type:"note", x:70, y:100, w:220, h:150, color:"#fff59d", text:"", locked:false });
-  refreshPage(page.id); persist();
-});
-
-/* ---------- Sayfa ekleme ---------- */
-document.getElementById("addPageBtn").addEventListener("click", ()=>{
-  dayData.pages.push(newPage());
-  renderAllPages(); persist();
-  workspace.scrollTo({top:workspace.scrollHeight, behavior:"smooth"});
-});
-
-/* ============================================================
-   GÜN NAVİGASYONU
-============================================================ */
-document.getElementById("prevDayBtn").addEventListener("click", ()=>{
-  const d = fromISO(currentDate); d.setDate(d.getDate()-1); loadDay(toISO(d));
-});
-document.getElementById("nextDayBtn").addEventListener("click", ()=>{
-  const d = fromISO(currentDate); d.setDate(d.getDate()+1); loadDay(toISO(d));
-});
-document.getElementById("todayBtn").addEventListener("click", ()=> loadDay(toISO(new Date())));
-document.getElementById("dateInput").addEventListener("change", (e)=>{ if(e.target.value) loadDay(e.target.value); });
-
-/* ============================================================
-   DIŞA AKTARMA: EXCEL
-============================================================ */
-document.getElementById("exportExcelBtn").addEventListener("click", async ()=>{
-  showToast("Excel hazırlanıyor...");
-  const allDates = collectAllLocalDates();
-  const rows = [];
-  for(const iso of allDates){
-    const d = loadLocal(iso);
-    if(!d) continue;
-    let combined = [];
-    d.pages.forEach(p=> p.boxes.forEach(b=>{ if(b.type==="note" && b.text && b.text.trim()) combined.push(b.text.trim()); }));
-    if(combined.length===0) continue;
-    rows.push({ "Tarih": iso, "Açıklama": combined.join(" | ") });
-  }
-  if(rows.length===0){ showToast("Aktarılacak not bulunamadı"); return; }
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Notlar");
-  XLSX.writeFile(wb, "cad_not_defteri.xlsx");
-});
-
-function collectAllLocalDates(){
-  const out=[];
-  for(let i=0;i<localStorage.length;i++){
-    const k = localStorage.key(i);
-    if(k && k.indexOf("cadnotdefteri_")===0) out.push(k.replace("cadnotdefteri_",""));
-  }
-  out.sort();
-  return out;
-}
-
-/* ============================================================
-   DIŞA AKTARMA: PDF
-============================================================ */
-document.getElementById("exportPdfBtn").addEventListener("click", async ()=>{
-  showToast("PDF hazırlanıyor...");
+// ---------- PDF Export ----------
+function exportPdf(){
+  if(!shapes.length){ showToast('Çizim boş'); return; }
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ unit:"mm", format:"a4" });
-  const pageEls = Array.from(workspace.querySelectorAll(".pageWrap"));
-  for(let i=0;i<pageEls.length;i++){
-    const el = pageEls[i];
-    el.querySelectorAll(".delPageBtn, .boxBar, .resizeHandle").forEach(x=>x.style.visibility="hidden");
-    const canvas = await html2canvas(el, {scale:2, useCORS:true});
-    el.querySelectorAll(".delPageBtn, .boxBar, .resizeHandle").forEach(x=>x.style.visibility="visible");
-    const img = canvas.toDataURL("image/jpeg",0.9);
-    if(i>0) pdf.addPage();
-    pdf.addImage(img,"JPEG",0,0,210,297);
-    pdf.setFontSize(9);
-    pdf.text(currentDate+" - Sayfa "+(i+1), 5, 292);
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for(const s of shapes) for(const p of s.points){ minX=Math.min(minX,p.x); minY=Math.min(minY,p.y); maxX=Math.max(maxX,p.x); maxY=Math.max(maxY,p.y); }
+  const drawW=maxX-minX, drawH=maxY-minY;
+  const landscape = drawW>drawH;
+  const doc = new jsPDF({unit:'mm',format:'a4',orientation:landscape?'landscape':'portrait'});
+  const pageW=doc.internal.pageSize.getWidth(), pageH=doc.internal.pageSize.getHeight();
+  const margin=15, availW=pageW-margin*2, availH=pageH-margin*2;
+  const s = Math.min(availW/Math.max(drawW,1), availH/Math.max(drawH,1));
+  const tx=(wx)=>margin+(wx-minX)*s, ty=(wy)=>margin+(wy-minY)*s;
+
+  doc.setLineWidth(0.25); doc.setDrawColor(20,20,20); doc.setTextColor(120,80,10); doc.setFontSize(8);
+  function label(p0,p1,mm){
+    const n=normalFor(p0,p1);
+    const mid={x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2};
+    doc.text(fmtLen(mm)+' mm', tx(mid.x)+n.x*4.5, ty(mid.y)+n.y*4.5, {align:'center'});
   }
-  pdf.save("cad_not_"+currentDate+".pdf");
-});
-
-/* ============================================================
-   ŞİFRE KİLİDİ
-============================================================ */
-function tryUnlock(){
-  const val = document.getElementById("pwInput").value;
-  if(val === APP_PASSWORD){
-    document.getElementById("lockScreen").style.display="none";
-    boot();
-  } else {
-    document.getElementById("lockError").textContent = "Şifre hatalı, tekrar deneyin.";
-    document.getElementById("pwInput").value="";
-    document.getElementById("pwInput").focus();
+  for(const sh of shapes){
+    if(sh.type==='line'){
+      const [p0,p1]=sh.points; doc.line(tx(p0.x),ty(p0.y),tx(p1.x),ty(p1.y)); label(p0,p1,p0.distanceTo(p1));
+    } else if(sh.type==='polyline'){
+      for(let i=0;i<sh.points.length-1;i++){ const p0=sh.points[i],p1=sh.points[i+1]; doc.line(tx(p0.x),ty(p0.y),tx(p1.x),ty(p1.y)); label(p0,p1,p0.distanceTo(p1)); }
+    } else if(sh.type==='rect'){
+      const p=sh.points;
+      for(let i=0;i<4;i++){ const a=p[i],b=p[(i+1)%4]; doc.line(tx(a.x),ty(a.y),tx(b.x),ty(b.y)); }
+      label(p[0],p[1],p[0].distanceTo(p[1])); label(p[1],p[2],p[1].distanceTo(p[2]));
+    } else if(sh.type==='mdf'){
+      const cs = getMdfCorners(sh.points[0], sh.points[1], sh.rawCursor);
+      for(let i=0;i<4;i++){ const a=cs[i],b=cs[(i+1)%4]; doc.line(tx(a.x),ty(a.y),tx(b.x),ty(b.y)); }
+      label(sh.points[0],sh.points[1],sh.points[0].distanceTo(sh.points[1]));
+    } else if(sh.type==='dim'){
+      const p0=sh.points[0], p1=sh.points[1];
+      const g = dimGeometry(p0,p1,sh.offset);
+      [g.ext0,g.ext1].forEach(seg=>{ doc.line(tx(seg[0].x),ty(seg[0].y),tx(seg[1].x),ty(seg[1].y)); });
+      doc.line(tx(g.dimP0.x),ty(g.dimP0.y),tx(g.dimP1.x),ty(g.dimP1.y));
+      const mid={x:(g.dimP0.x+g.dimP1.x)/2,y:(g.dimP0.y+g.dimP1.y)/2};
+      doc.text(fmtLen(p0.distanceTo(p1))+' mm', tx(mid.x), ty(mid.y)-1, {align:'center'});
+    }
   }
-}
-document.getElementById("lockBtn").addEventListener("click", tryUnlock);
-document.getElementById("pwInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") tryUnlock(); });
-
-/* ============================================================
-   BAŞLANGIÇ
-============================================================ */
-let booted = false;
-function boot(){
-  if(booted) return; booted = true;
-  loadDay(toISO(new Date()));
+  doc.save('cizgi-cad-'+new Date().toISOString().slice(0,10)+'.pdf');
 }
 
-/* PWA: basit servis worker (sayfa önbellekleme) */
-if("serviceWorker" in navigator){
-  try{
-    const swCode = "self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{});";
-    const blob = new Blob([swCode], {type:"text/javascript"});
-    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-  }catch(e){}
-}
+// ---------- Init ----------
+const loaded = load();
+resizeCanvas();
+if(!loaded){ offX=40; offY=40; }
+setTool('mdf');
+render();
 
-/* Manifest (data URI) - kurulabilirlik için */
-try{
-  const manifest = {
-    name: "CAD Not Defteri", short_name: "CAD Defteri", start_url: ".", display: "standalone",
-    background_color: "#0f172a", theme_color: "#1e293b",
-    icons: [{ src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192'%3E%3Crect width='192' height='192' fill='%233b82f6'/%3E%3Ctext x='96' y='120' font-size='90' text-anchor='middle' fill='white'%3EC%3C/text%3E%3C/svg%3E", sizes:"192x192", type:"image/svg+xml" }]
-  };
-  const link = document.createElement("link");
-  link.rel="manifest";
-  link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:"application/json"}));
-  document.head.appendChild(link);
-}catch(e){}
+if(!window.isSecureContext){
+  setTimeout(()=>showToast('Not: Mikrofon için bu dosyayı bir sunucudan (http/https) açmanız gerekir'), 1000);
+}
 
 })();
 </script>
