@@ -303,7 +303,7 @@ function resizeCanvas(){
 window.addEventListener('resize', resizeCanvas);
 
 // ---------- Persistence ----------
-const STORAGE_KEY = 'cizgi_cad_v15_data';
+const STORAGE_KEY = 'cizgi_cad_v14_data';
 function save(showMsg){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify({shapes,scale,offX,offY,nextId}));
