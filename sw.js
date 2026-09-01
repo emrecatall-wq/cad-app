@@ -1,6 +1,6 @@
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open('cad-app-v2').then((cache) => {
+    caches.open('cad-app-v4').then((cache) => {
       return cache.addAll(['index.html', 'manifest.json']);
     })
   );
