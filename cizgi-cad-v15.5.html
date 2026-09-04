@@ -4,14 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Çizgi CAD v15.5 - Zoom Düzeltmesi + APK Uyumlu Diyaloglar</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1b1d1f">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Çizgi CAD">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{
     --bg:#1b1d1f;
@@ -2114,13 +2106,6 @@ render();
 
 if(!window.isSecureContext){
   setTimeout(()=>showToast('Not: Mikrofon için bu dosyayı bir sunucudan (http/https) açmanız gerekir'), 1000);
-}
-
-// ---------- PWA: Service Worker Kaydı ----------
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  });
 }
 
 })();
